@@ -20,7 +20,7 @@ from cost import QQt, RRt
 import armijo
 
 # import reference trajectory generator
-import reference_trajectory as ref_gen
+import homework_reference_trajectory as ref_gen
 
 import animation
 
@@ -38,7 +38,7 @@ plt.rcParams.update({'font.size': 22})
 #######################################
 
 # max_iters = int(1e1)
-max_iters = 300
+max_iters = 3
 # max_iters = int(3e2)
 fixed_stepsize = 1e-2
 
@@ -52,7 +52,7 @@ armijo_maxiters = 20 # number of Armijo iterations
 term_cond = 1e-6
 
 visu_descent_plot = False
-visu_animation = False
+visu_animation = True
 
 #######################################
 # Trajectory parameters
@@ -70,7 +70,7 @@ TT = int(tf/dt) # discrete-time samples
 # Reference curve
 ######################################
 
-step_reference = False
+step_reference = True
 
 xx_ref, uu_ref = ref_gen.gen(step_reference=step_reference,tf=tf,dt=dt,ns=ns,ni=ni)
 
