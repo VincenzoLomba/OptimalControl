@@ -32,7 +32,7 @@ def getEquilibriumPoints(uu, xx0):
 
     for i in range(maximumIteration-1):
         
-        xxp, dfdx, dfdu = f(xx[:,i], uu)
+        xxp, dfdx, _, _, _, _ = f(xx[:,i], uu)
         xxp = xxp - xx[:,i].reshape(ns, 1)
         dfdx = dfdx - eye(ns)
         direction = -linalg.inv(dfdx)@xxp;
@@ -61,7 +61,7 @@ print(getEquilibriumPoints(
 ));
 
 ϑ1_initial = pi - pi/180*20
-ϑ2_initial = -pi/180*90
+ϑ2_initial = -pi/180*135
 print(getEquilibriumPoints(
     array([0]),
     array([ϑ1_initial, ϑ2_initial, 0, 0])
