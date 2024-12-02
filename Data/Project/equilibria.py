@@ -32,7 +32,7 @@ def getEquilibriumPoints(uu, xx0):
 
     for i in range(maximumIteration-1):
         
-        xxp, dfdx, _, _, _, _ = f(xx[:,i], uu)
+        xxp, dfdx, _, _, _, _, _ = f(xx[:,i], uu)
         xxp = xxp - xx[:,i].reshape(ns, 1)
         dfdx = dfdx - eye(ns)
         direction = -linalg.inv(dfdx)@xxp;

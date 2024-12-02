@@ -17,7 +17,8 @@ def discretizedDynamicFRA(xx,uu):
     - dfdx: 4x4 jacobian of the dynamics wrt x at xx,uu
     - dfdu: 4x1 jacobian of the dynamics wrt u at xx,uu
     - d2fdxdx: 4x4x4 hessian of the dynamics wrt x two times at xx,uu
-    - d2fdxdu: 4x1x4 hessian of the dynamics one time wrt x and one time wrt u at xx,uu
+    - d2fdxdu: 4x4 hessian of the dynamics one time wrt x and one time wrt u at xx,uu
+    - d2fdudx: 4x1x4 hessian of the dynamics one time wrt u and one time wrt x at xx,uu
     - d2fdudu: 4x1 hessian of the dynamics wrt u two times at xx,uu
     """
     xx = xx.squeeze()
@@ -191,8 +192,8 @@ def discretizedDynamicFRA(xx,uu):
     d2fdxdx[0:2, :, :] = [0, 0, 0, 0]
     d2fdxdx[2:4, 0, 0] = dt*(invM@(-d2Gdx0x0-d2Cdx0x0))
     d2fdxdx[2:4, 0, 1] = dt*((invM@(-d2Gdx0x1-d2Cdx0x1))+dinvMdx1@(-dGdx[0]-dCdx[0]))
-    d2fdxdx[2:4, 0, 0] = array([0, 0])
-    d2fdxdx[2:4, 0, 0] = array([0, 0])
+    d2fdxdx[2:4, 0, 2] = array([0, 0])
+    d2fdxdx[2:4, 0, 3] = array([0, 0])
     d2fdxdx[2:4, 1, 0] = dt*(invM@(-d2Gdx1x0-d2Cdx1x0)+dinvMdx1@(-dCdx[0]-dGdx[0]))
     d2fdxdx[2:4, 1, 1] = dt*(invM@(-d2Gdx1x1-d2Cdx1x1)+d2invMdx1x1@(U-F@array([xx[2], xx[3]])-C-G)+dinvMdx1@(-dCdx[1]-dGdx[1]))
     d2fdxdx[2:4, 1, 2] = dt*(invM@(-d2Gdx1x2-d2Cdx1x2) + dinvMdx1@(-F@array([1, 0])-dCdx[2]-dGdx[2]))
@@ -201,15 +202,18 @@ def discretizedDynamicFRA(xx,uu):
     d2fdxdx[2:4, 2, 1] = dt*(dinvMdx1@(-dGdx[2]-F@array([1, 0])-dCdx[2])+invM@(-d2Gdx2x1-d2Cdx2x1))
     d2fdxdx[2:4, 2, 2] = dt*(invM@(-d2Gdx2x2-d2Cdx2x2))
     d2fdxdx[2:4, 2, 3] = dt*(invM@(-d2Gdx2x3-d2Cdx2x3))
-    d2fdxdx[2:4, 2, 0] = array([0, 0])
-    d2fdxdx[2:4, 2, 1] = dt*(dinvMdx1@(-dGdx[3]-F@array([0, 1])-dCdx[3])+invM@(-d2Gdx3x1-d2Cdx3x1))
-    d2fdxdx[2:4, 2, 2] = dt*(invM@(-d2Gdx3x2-d2Cdx3x2))
-    d2fdxdx[2:4, 2, 3] = dt*(invM@(-d2Gdx3x3-d2Cdx3x3))
+    d2fdxdx[2:4, 3, 0] = array([0, 0])
+    d2fdxdx[2:4, 3, 1] = dt*(dinvMdx1@(-dGdx[3]-F@array([0, 1])-dCdx[3])+invM@(-d2Gdx3x1-d2Cdx3x1))
+    d2fdxdx[2:4, 3, 2] = dt*(invM@(-d2Gdx3x2-d2Cdx3x2))
+    d2fdxdx[2:4, 3, 3] = dt*(invM@(-d2Gdx3x3-d2Cdx3x3))
 
     # Tensor hessian of the dynamics wrt u two times at xx,uu (d2fdu2, 4x1)
     d2fdudu = zeros((ns, ni))
     
-    # Tensor hessian of the dynamics wrt x one time and u one time at xx,uu (d2fdxdu, 4x1x4)
-    d2fdxdu = zeros((ns, ni, ns))
+    # Tensor hessian of the dynamics wrt x one time and u one time at xx,uu (d2fdxdu, 4x4)
+    d2fdxdu = zeros((ns, ns))
 
-    return xxp, dfdx, dfdu, d2fdxdx, d2fdxdu, d2fdudu
+    # Tensor hessian of the dynamics wrt u one time and x one time at xx,uu (d2fdxdu, 4x1x4)
+    d2fdudx = zeros((ns, ni, ns))
+
+    return xxp, dfdx, dfdu, d2fdxdx, d2fdxdu, d2fdudx, d2fdudu
