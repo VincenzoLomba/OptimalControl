@@ -1,155 +1,314 @@
-from Auxiliaries.final_dyn import *
-from Auxiliaries.parameters_3 import *
+#NEWTON METHOD FOR OPTIMAL CONTROL:
+
 from numpy import *
-from Auxiliaries.ltv_LQR_affine import ltv_LQR
-from Auxiliaries.costs import *
-from Auxiliaries.useful_functions import *
+import scipy as sp
+import matplotlib.pyplot as plt
 
-def NM_robustOC(xx0, uu0, xx_ref, uu_ref, TT, max_iter=50, tol=1e-4):
-    """
-    Newton Method for optimal control with closed loop, regularized approach.
+# import pendulum dynamics
+from NL_dynamics_FRA import *
 
-    Args:
-        xx0 (array): State initial system (dimension ns).
-        uu0 (array): Initial input (dimension ni x TT-1).
-        TT (int): Time horizon.
-        max_iter (int): Maximum number of iterations.
-        tol (float): Convergence tolerance.
+# import cost functions
+from cost import *
 
-    Returns:
-        xx_traj: Optimal state trajectory.
-        uu_traj: Optimal control trajectory.
-        cost (list): Cost list per iteration.
-    """
+from useful_functions import *
+from solver_ltv_LQR import *
 
-    # Initializing variables
-    xx_traj = zeros((ns, TT))
-    xx_traj[:, 0] = xx0
-    uu_traj = uu0.copy()
-    cost_history = []
+# Allow Ctrl-C to work despite plotting
+import signal
+signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    for k in range(max_iter):
-        # Forward Simulation with the actual trajectory (x_traj, u_traj)
-        for t in range(TT - 1):
-            xx_traj[:, t + 1] = discretizedDynamicFRA(xx_traj[:, t], uu_traj[:, t])[0].squeeze()
-            
+plt.rcParams["figure.figsize"] = (10,8)
+plt.rcParams.update({'font.size': 22})
 
-        # Computation of the actual cost
-        total_cost = 0
-        for t in range(TT - 1):
-            ll, _, _, _, _, _ = stagecost(xx_traj[:, t], uu_traj[:, t], xx_ref[:, t], uu_ref[:, t])
-            total_cost += ll
-        llT, _, _ = termcost(xx_traj[:, -1], xx_ref[:, -1])
-        total_cost += llT
-        cost_history.append(total_cost)
-        print(total_cost)
+#def NM_robust_OC(xx_ref, uu_ref, xx0, TT, max_iter=10, tol=1e-6): 
 
-        # Verifying convergence
-        if k > 0 and abs(cost_history[-1] - cost_history[-2]) < tol:
-            print(f"Convergence obtained in {k} iterations.")
-            break
-        
-        #COMPUTATION OF DESCENT DIRECTION:
-        #STEP 1.1: Computation of AAt, BBt, qqt, rrt (and declaration of QQt, RRt, SSt & their regularized version)
-        AAt = zeros((ns, ns, TT - 1))
-        BBt = zeros((ns, ni, TT - 1))
-        QQt = zeros((ns, ns, TT))
-        RRt = zeros((ni, ni, TT - 1))
-        SSt = zeros((ni, ns, TT - 1))
-        QQt_reg = zeros((ns, ns))
-        RRt_reg = zeros((ni, ni))
-        SSt_reg = zeros((ni, ns))
-        qqt = zeros((ns, TT))
-        rrt = zeros((ni, TT - 1))
+#######################################
+# Algorithm parameters
+#######################################
 
-        for t in range(TT - 1):
-            _, AA, BB, d2fdxdx, d2fdxdu, _, d2fdudu = discretizedDynamicFRA(xx_traj[:, t], uu_traj[:, t])
-            _, lx, lu, lxx, lxu, luu = stagecost(xx_traj[:, t], uu_traj[:, t], xx_ref[:, t], uu_ref[:, t])
-            AAt[:, :, t] = AA
-            BBt[:, :, t] = BB
-            qqt[:, t] = lx.squeeze()
-            rrt[:, t] = lu.squeeze()
+# max_iters = int(1e1)
+max_iters = 5
 
-        # Defining the terminal values of QQ and qq:
-        _, lTx, lTxx = termcost(xx_traj[:, -1], xx_ref[:, -1])
-        QQt[:, :, -1] = lTxx
-        qqt[:, -1] = lTx
-        QQT = QQt[:, :, -1] 
-        qqT = qqt[:, -1]
-        
-        #STEP 1.2: Compute the costates (lambda_t)
-        lambda_t = zeros((ns, TT))
-        lambda_t[:, -1] = qqT  # Terminal condition for lambda_T
+# ARMIJO PARAMETERS
+Armijo = True
+stepsize_0 = 0.7
+cc = 0.5
+beta = 0.7
+armijo_maxiters = 20 # number of Armijo iterations
 
-        for t in reversed(range(TT - 1)):
-            lambda_t[:, t] = AAt[:, :, t].T @ lambda_t[:, t + 1]
+term_cond = 1e-19
 
-        #We define their regularized version
-        QQt_reg = lxx
-        RRt_reg = luu
-        SSt_reg = lxu
+visu_descent_plot = False
+visu_animation = False
 
-        for t in range(TT - 1):
-            #STEP 1.3 Defining matrices QQt, RRt, SSt:
-            #Here we implement a regularization: we check if QQt, RRt, SSt are pos.def.; YES--> we use them ELSE --> we use their reg version
-            contractionQQt = np.tensordot(d2fdxdx, lambda_t[:, t + 1], axes=([0], [0]))
-            contractionRRt = np.tensordot(d2fdudu, lambda_t[:, t + 1], axes=([0], [0]))
-            contractionSSt = np.tensordot(d2fdxdu, lambda_t[:, t + 1], axes=([0], [0])) 
-            
-            QQt[:, :, t] = lxx + contractionQQt
-            RRt[:, :, t] = luu + contractionRRt
-            SSt[:, :, t] = lxu + contractionSSt.T
+#######################################
+# Trajectory parameters
+#######################################
 
-            QQt[:, :, t] = QQt[:, :, t] if is_pos_def(QQt[:, :, t]) else QQt_reg
-            RRt[:, :, t] = RRt[:, :, t] if is_pos_def(RRt[:, :, t]) else RRt_reg
-            SSt[:, :, t] = SSt[:, :, t] if is_pos_def(SSt[:, :, t]) else SSt_reg
-        
-        #DEBUG
-        print(f"AAt shape: {AAt.shape}")      # Dovrebbe essere (ns, ns, TT - 1)
-        print(f"BBt shape: {BBt.shape}")      # Dovrebbe essere (ns, ni, TT - 1)
-        print(f"QQt shape: {QQt.shape}")      # Dovrebbe essere (ns, ns, TT)
-        print(f"RRt shape: {RRt.shape}")      # Dovrebbe essere (ni, ni, TT - 1)
-        print(f"SSt shape: {SSt.shape}")      # Dovrebbe essere (ni, ns, TT - 1)
-        print(f"QQT shape: {QQT.shape}")      # Dovrebbe essere (ns, ns)
-        print(f"ni: {ni}, ns: {ns}, TT: {TT}")
+tf = 10 # final time in seconds
+
+#discretization step from parameters_3:
+TT = int(1/dt) # discrete-time samples
+
+######################################
+# Reference curve
+######################################
+
+step_reference = True
+
+xx_ref, uu_ref = traj_gen(step_reference=step_reference,tf=tf,dt=dt,ns=ns,ni=ni)
+
+######################################
+# Arrays to store data
+######################################
+
+xx0 = xx_ref[:,0] # initial state
+uu0 = uu_ref[:,0] # initial input
+
+# Forward simulation of the dynamics:
+uu_init = uu_ref
+xx_init = zeros((ns, TT))
+xx_init[:,0] = xx0
+for tt in range(TT-1): 
+  xx_init[:,tt+1]=discretizedDynamicFRA(xx_init[:,tt], uu_init[:,tt])[0].squeeze()
+
+xx_traj = zeros((ns, TT, max_iters)) # state sequence
+uu_traj = zeros((ni, TT, max_iters)) # input sequence
+
+#initializing state sequence
+xx_traj[:,:,0] = xx_init[:,:] 
+for kk in range(max_iters):
+  xx_traj[:,0,kk] = xx0
+
+#initializing input sequence:
+uu_traj[:,:,0] = uu_init[:,:]
 
 
-        #STEP 1.4: conclusion --> We compute the Gain K and the cost sigma to compute delta_uu and finally delta_xx
-        KK, sigma, PP = ltv_LQR(AAt, BBt, QQt, RRt, SSt, QQT, TT, xx0, qqt, rrt, qqT)
+dJ = zeros((ni,TT, max_iters))   # DJ - gradient of J wrt u
+JJ = zeros(max_iters)            # collect cost
+descent = zeros(max_iters)       # descent module
+descent_arm = zeros(max_iters)   # collect armijo descent direction
+lmbd = zeros((ns, TT, max_iters))    # co-states lambdas vector
 
-        #STEP 2: Update of control sequence 
-        xx_new = zeros_like(xx_traj)
-        uu_new = zeros_like(uu_traj)
-        delta_uu = zeros_like(uu_traj)
+# Defining matrices dimensions
+AAt = zeros((ns, ns, TT))
+BBt = zeros((ns, ni, TT))
+qqt = zeros((ns, TT))
+qqT = zeros((ns))
+QQt = zeros((ns, ns, TT))
+QQT = zeros((ns,ns))
+rrt = zeros((ni, TT))
+RRt = zeros((ni, ni, TT))
+SSt = zeros((ni, ns, TT))
 
-        #Definition of Stepsize Armijo rule's parameters
-        descent_arm = 0.0
-        stepsize_0 = 1
-        armijo_iters = 20
-        cc = 0.5
-        beta = 0.7
-        gamma = 1 #it will be updated with Armijo
+######################################
+# Main
+######################################
 
-        for t in range(TT - 1):
-            #Control sequence update: 
-            delta_uu[:, t] = KK[:, :, t] @ (xx_new[:, t] - xx_traj[:, t]) + sigma[:, t]
-            descent_arm = delta_uu[:, t].T @ rrt[:, t]
-        
-        gamma = stepsize_armijo(stepsize_0, armijo_iters, cc, beta, delta_uu, xx_ref, uu_ref, xx0, uu_traj, total_cost, descent_arm)
-        
-        for t in range(TT - 1):
-            uu_new[:, t] = uu_traj[:, t] + KK[:, :, t] @ (xx_new[:, t] - xx_traj[:, t]) + gamma * sigma[:, t]
+print('-*-*-*-*-*-')
+
+# Create a figure and subplots
+fig, axs = plt.subplots(3, 1, figsize=(10, 8))
+kk = 0
+
+for kk in range(max_iters-1):
+
+  JJ[kk] = 0 # Cost initialization
+
+  #######################################################
+  #STEP 1.1: COMPUTE AA, BB, QQ, RR, SS, qq, rr & costs: 
+  #######################################################
+
+  # Cost computation: 
+  for tt in range(TT-1): 
+    temp_cost = stagecost(xx_traj[:,tt,kk], uu_traj[:,tt,kk], xx_ref[:,tt], uu_ref[:,tt])[0]
+    JJ[kk] += temp_cost
+  
+  temp_cost = termcost(xx_traj[:,-1,kk], xx_ref[:,-1])[0]
+  JJ[kk] += temp_cost
+
+  # defining terminal values for lambdas, QQt, qqt:
+  lmbd_temp = termcost(xx_traj[:,TT-1,kk], xx_ref[:,TT-1])[1]
+  lmbd[:,TT-1,kk] = lmbd_temp.copy().squeeze()
+
+  QQT = termcost(xx_traj[:,TT-1,kk], xx_ref[:,TT-1])[2]
+  qqT = lmbd_temp.squeeze()
+                                                                                      
+  # Here starts the computation of all quantities:
+  for tt in reversed(range(TT-1)): # integration backward in time
+    xx_traj[:,tt+1,kk] = discretizedDynamicFRA(xx_traj[:,tt,kk], uu_traj[:,tt,kk])[0].squeeze()
+    dfdx, dfdu, d2fdxdx, d2fdxdu, _, d2fdudu = discretizedDynamicFRA(xx_traj[:,tt,kk], uu_traj[:,tt,kk])[1:]
+    AAt[:,:,tt] = dfdx.T
+    BBt[:,:,tt] = dfdu
+
+    aa, bb, QQt[:,:,tt], SSt[:,:,tt], RRt[:,:,tt] = stagecost(xx_traj[:,tt,kk], uu_traj[:,tt,kk], xx_ref[:,tt], uu_ref[:,tt])[1:]
+
+    aa = aa.squeeze()
+    bb = bb.squeeze()
+    qqt[:,tt] = aa
+    rrt[:,tt] = bb
+  
+    #######################################
+    #STEP 1.2: COMPUTE COSTATE EQUATIONS:
+    #######################################
+    AA = dfdx.T
+    BB = dfdu
+    for tt in reversed(range(TT-1)):  
+      a, b, Q, S, R = stagecost(xx_traj[:,tt,kk], uu_traj[:,tt,kk], xx_ref[:,tt], uu_ref[:,tt])[1:]
+      lmbd_temp = AA.T@lmbd[:,tt+1,kk][:,None] + a # costate equation
+      lmbd[:,tt,kk] = lmbd_temp.squeeze()
+      # We define QQt,RRt,SSt as their normal version <==> they're positive definite
+      #if is_pos_def(QQt[:,:,tt]): QQt[:,:,tt] += d2fdxdx@lmbd[:,tt+1,kk]
+      #if is_pos_def(SSt[:,:,tt]): SSt[:,:,tt] += d2fdxdu@lmbd[:,tt+1,kk]
+      #if is_pos_def(RRt[:,:,tt]): RRt[:,:,tt] += d2fdudu@lmbd[:,tt+1,kk]
+
+      dJ_temp = BB.T@lmbd[:,tt+1,kk][:,None] + b # gradient of J wrt u
+      dJ[:,tt,kk] = dJ_temp.squeeze()
+
+  
+  xx_0 = zeros((ns))
+  KK, sigma, PP, xx_delta, uu_delta = ltv_LQR(AAt, BBt, QQt, RRt, SSt, QQT, TT, xx_0, qqt, rrt, qqT)
+
+  for tt in reversed(range(TT-1)):  # integration backward in time
+    descent[kk] += -dJ[:,tt,kk].T@uu_delta[:,tt]
+    descent_arm[kk] += dJ[:,tt,kk].T@uu_delta[:,tt]
+
+  ######################################
+  #STEP 1.3: STEPSIZE SELECTION ARMIJO:
+  ######################################
+
+  stepsizes = []  # list of stepsizes
+  costs_armijo = []
+
+  stepsize = stepsize_0
+
+  ns = xx_ref.shape[0]
+  ni = uu_ref.shape[0]
+
+
+  for ii in range(armijo_maxiters):
+
+    # temp solution update
+
+    xx_temp = np.zeros((ns,TT))
+    uu_temp = np.zeros((ni,TT))
+
+    xx_temp[:,0] = xx0
+
+
+    for tt in range(TT-1):
+          uu_temp[:,tt] = uu_traj[:,tt,kk] + stepsize*uu_delta[:,tt]
+          #uu_temp[:,tt] = uu_traj[:,tt,kk] + stepsize*sigma[:,tt] + KK[:,:,tt]@xx_delta[:,tt]
+          xx_temp[:,tt+1] = dyn.discretizedDynamicFRA(xx_temp[:,tt], uu_temp[:,tt])[0].squeeze()
+
+    # temp cost calculation
+    JJ_temp = 0
+
+    for tt in range(TT-1):
+          temp_cost = stagecost(xx_temp[:,tt], uu_temp[:,tt], xx_ref[:,tt], uu_ref[:,tt])[0]
+          JJ_temp += temp_cost
+
+    temp_cost = termcost(xx_temp[:,-1], xx_ref[:,-1])[0]
+    JJ_temp += temp_cost
+
+    stepsizes.append(stepsize)      # save the stepsize
+    #costs_armijo.append(np.min([JJ_temp, 100*JJ]))    # save the cost associated to the stepsize
+
+    if JJ_temp > JJ[kk] + cc*stepsize*descent_arm[kk]:
+          # update the stepsize
+          stepsize = beta*stepsize
+
+    else:
+          print('Armijo stepsize = {:.3e}'.format(stepsize))
+          break
     
-            #Compute the new state using the dynamics: 
-            xx_new[:, t + 1] = discretizedDynamicFRA(xx_new[:, t], uu_new[:, t])[0].squeeze()
-            
+    if ii == armijo_maxiters -1:
+          print("WARNING: no stepsize was found with armijo rule!")
+  
 
+  ############################################################
+  #STEP 1.4: UPDATE
+  ############################################################
 
-        #STEP 3: TRAJECTORY UPDATE
-        xx_traj = xx_new
-        uu_traj = uu_new
+  xx_temp = zeros((ns, TT))
+  uu_temp = zeros((ni, TT))
+  xx_temp[:,0] = xx0
 
-    return xx_traj, uu_traj, cost_history
+  for tt in range(TT-1): 
+    uu_temp[:,tt] = uu_traj[:,tt,kk] + stepsize*uu_delta[:,tt]
+    #uu_temp[:,tt] = uu_traj[:,tt,kk] + stepsize*sigma[:,tt] + KK[:,:,tt]@xx_delta[:,tt]
+    xx_temp[:,tt+1] = discretizedDynamicFRA(xx_temp[:,tt], uu_temp[:,tt])[0].squeeze()
+  
+  xx_traj[:,:,kk+1] = xx_temp.copy()
+  uu_traj[:,:,kk+1] = uu_temp.copy()
+
+  ############################
+  # Termination condition
+  ############################
+
+  print('Iter = {}\t Descent = {:.3e}\t Cost = {:.3e}'.format(kk,descent[kk], JJ[kk]))
+
+  if descent[kk] <= term_cond:
+
+    max_iters = kk
+
+    break
+
+xx_star = xx_traj[:,:,max_iters-1]
+uu_star = uu_traj[:,:,max_iters-1]
+uu_star[:,-1] = uu_star[:,-2] # for plotting purposes
+
+##################################
+# Plot final results
+##################################
+
+# Plot cost and descent
+plt.figure()
+plt.plot(range(max_iters), JJ[:max_iters], label='Cost')
+plt.xlabel('Iterations')
+plt.ylabel('Cost')
+plt.yscale('log')
+plt.grid(True)
+plt.title('Cost evolution')
+plt.legend()
+plt.show(block=False)
+
+plt.figure()
+plt.plot(range(max_iters), descent[:max_iters], label='Descent Norm')
+plt.xlabel('Iterations')
+plt.ylabel('||∇J(u^k)||')
+plt.yscale('log')
+plt.grid(True)
+plt.title('Gradient Norm evolution')
+plt.legend()
+plt.show(block=False)
+
+# Plot final trajectories
+tt_hor = linspace(0, tf, TT)
+
+fig, axs = plt.subplots(ns+ni, 1, sharex=True)
+
+# Stati
+for i in range(ns):
+    axs[i].plot(tt_hor, xx_star[i,:], linewidth=2, label='x_'+str(i+1))
+    axs[i].plot(tt_hor, xx_ref[i,:], 'g--', linewidth=2, label='x_ref_'+str(i+1))
+    axs[i].grid(True)
+    axs[i].set_ylabel('x_'+str(i+1))
+    axs[i].legend()
+
+# Input
+for j in range(ni):
+    axs[ns+j].plot(tt_hor, uu_star[j,:], 'r', linewidth=2, label='u_'+str(j+1))
+    axs[ns+j].plot(tt_hor, uu_ref[j,:], 'r--', linewidth=2, label='u_ref_'+str(j+1))
+    axs[ns+j].grid(True)
+    axs[ns+j].set_ylabel('u_'+str(j+1))
+    axs[ns+j].legend()
+
+axs[-1].set_xlabel('Time (s)')
+
+plt.suptitle('Optimal trajectories vs Reference')
+plt.tight_layout()
+plt.show()
 
     
 
