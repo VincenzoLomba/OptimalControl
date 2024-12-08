@@ -1,44 +1,99 @@
-from numpy import * 
-from Auxiliaries.parameters_3 import *
+#
+# Gradient method for Optimal Control
+# Cost functions
+# Lorenzo Sforni, Marco Falotico
+# Bologna, 22/11/2022
+#
 
-QQt = 0.1*array([[100.0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-RRt = eye(ni, ni)
+from numpy import *
+import control
+import NL_dynamics_FRA as dyn
 
-def stagecost(xx, uu, xx_ref, uu_ref):
-    xx = xx[:,None]
-    uu = uu[:,None]
+ns = dyn.ns
+ni = dyn.ni
 
-    xx_ref = xx_ref[:,None]
-    uu_ref = uu_ref[:,None]
+QQt_cost = 0.1*array([
+         [100.0,  0,  0,  0], 
+         [0,     50,  0,  0], 
+         [0,      0, 10,  0], 
+         [0,      0,  0, 10]])
 
-    delta_xx = xx - xx_ref
-    delta_uu = uu - uu_ref
+RRt_cost = 0.01*eye(ni,ni)
 
-    '''
-    #Debug
-    print("Forma delta_xx:", delta_xx.shape)
-    print("Forma QQt:", QQt.shape)
-    print("Forma delta_uu:", delta_uu.shape)
-    print("Forma RRt:", RRt.shape)
-    '''
+SSt_cost = zeros((ni, ns))
 
-    ll = 0.5*delta_xx.T@QQt@delta_xx + 0.5*delta_uu.T@RRt@delta_uu
+QQT_cost = 0.5 * array([
+    [200.0, 0,   0,   0],
+    [0,    100,  0,   0],
+    [0,     0,   10,  0],
+    [0,     0,    0, 10]
+])
 
-    lx = QQt@(xx - xx_ref)
-    lu = RRt@(uu - uu_ref)
 
-    lxx = QQt
-    lxu = zeros((ni, ns))
-    luu = RRt
+def stagecost(xx,uu, xx_ref, uu_ref):
+  """
+    Stage-cost 
 
-    return ll.squeeze(), lx, lu, lxx, lxu, luu
+    Quadratic cost function 
+    l(x,u) = 1/2 (x - x_ref)^T Q (x - x_ref) + 1/2 (u - u_ref)^T R (u - u_ref)
 
-def termcost(xxT, xxT_ref, QQT=QQt):
+    Args
+      - xx \in \R^2 state at time t
+      - xx_ref \in \R^2 state reference at time t
 
-    llT = 0.5*(xxT - xxT_ref).T@QQT@(xxT - xxT_ref)
+      - uu \in \R^1 input at time t
+      - uu_ref \in \R^2 input reference at time t
 
-    lTx = QQT@(xxT - xxT_ref)
 
-    lTxx = QQT
+    Return 
+      - cost at xx,uu
+      - gradient of l wrt x, at xx,uu
+      - gradient of l wrt u, at xx,uu
+  
+  """
 
-    return llT.squeeze(), lTx, lTxx
+  xx = xx[:,None]
+  uu = uu[:,None]
+
+  xx_ref = xx_ref[:,None]
+  uu_ref = uu_ref[:,None]
+
+  ll = 0.5*(xx - xx_ref).T@QQt_cost@(xx - xx_ref) + 0.5*(uu - uu_ref).T@RRt_cost@(uu - uu_ref)
+
+  lx = QQt_cost@(xx - xx_ref)
+  lu = RRt_cost@(uu - uu_ref)
+
+  lxx = QQt_cost
+  lxu = SSt_cost
+  luu = RRt_cost
+
+  return ll.squeeze(), lx, lu, lxx, lxu, luu
+
+def termcost(xT,xT_ref):
+  """
+    Terminal-cost
+
+    Quadratic cost function l_T(x) = 1/2 (x - x_ref)^T Q_T (x - x_ref)
+
+    Args
+      - xT \in \R^2 state at time t
+      - xT_ref \in \R^2 state reference at time t
+
+    Return 
+      - cost at xT,uu
+      - gradient of l wrt x, at xT,uu
+      - gradient of l wrt u, at xT,uu
+  
+  """
+
+  xT = xT[:,None]
+  xT_ref = xT_ref[:,None]
+
+  llT = 0.5*(xT - xT_ref).T@QQT_cost@(xT - xT_ref)
+
+  lTx = QQT_cost@(xT - xT_ref)
+
+  lTxx = QQT_cost
+
+
+  return llT.squeeze(), lTx, lTxx
