@@ -1,4 +1,5 @@
-from numpy import *
+import numpy as np
+from useful_functions import is_pos_def
 
 
 def ltv_LQR(AAin, BBin, QQin, RRin, SSin, QQfin, TT, x0, qqin = None, rrin = None, qqfin = None):
@@ -86,10 +87,12 @@ def ltv_LQR(AAin, BBin, QQin, RRin, SSin, QQfin, TT, x0, qqin = None, rrin = Non
     augmented = True
     print("Augmented term!")
 
-  KK = zeros((ni, ns, TT))
-  sigma = zeros((ni, TT))
-  PP = zeros((ns, ns, TT))
-  pp = zeros((ns, TT))
+  # Defining matrices: 
+
+  KK = np.zeros((ni, ns, TT))
+  sigma = np.zeros((ni, TT))
+  PP = np.zeros((ns, ns, TT))
+  pp = np.zeros((ns, TT))
 
   QQ = QQin
   RR = RRin
@@ -104,16 +107,23 @@ def ltv_LQR(AAin, BBin, QQin, RRin, SSin, QQfin, TT, x0, qqin = None, rrin = Non
   AA = AAin
   BB = BBin
 
-  xx = zeros((ns, TT))
-  uu = zeros((ni, TT))
+  xx = np.zeros((ns, TT))
+  uu = np.zeros((ni, TT))
 
   xx[:,0] = x0
   
-  #Initial (Contour) values of PP & pp:
   PP[:,:,-1] = QQf
   pp[:,-1] = qqf
+
+  if augmented:
+    if qq is None:
+      qq = np.zeros(ns)
+    if rr is None:
+      rr = np.zeros(ni)
+    if qqf is None:
+      qqf = np.zeros(ns)
   
-  #Solve Riccati equation
+  # Solve Riccati equation
   for tt in reversed(range(TT-1)):
     QQt = QQ[:,:,tt]
     qqt = qq[:,tt][:,None]
@@ -125,7 +135,7 @@ def ltv_LQR(AAin, BBin, QQin, RRin, SSin, QQfin, TT, x0, qqin = None, rrin = Non
     PPtp = PP[:,:,tt+1]
     pptp = pp[:, tt+1][:,None]
 
-    MMt_inv = linalg.inv(RRt + BBt.T @ PPtp @ BBt)
+    MMt_inv = np.linalg.inv(RRt + BBt.T @ PPtp @ BBt)
     mmt = rrt + BBt.T @ pptp
     
     PPt = AAt.T @ PPtp @ AAt - (BBt.T@PPtp@AAt + SSt).T @ MMt_inv @ (BBt.T@PPtp@AAt + SSt) + QQt
@@ -135,7 +145,7 @@ def ltv_LQR(AAin, BBin, QQin, RRin, SSin, QQfin, TT, x0, qqin = None, rrin = Non
     pp[:,tt] = ppt.squeeze()
 
 
-  #Evaluate K GAIN: 
+  # Evaluate KK
   
   for tt in range(TT-1):
     QQt = QQ[:,:,tt]
@@ -149,26 +159,27 @@ def ltv_LQR(AAin, BBin, QQin, RRin, SSin, QQfin, TT, x0, qqin = None, rrin = Non
     PPtp = PP[:,:,tt+1]
     pptp = pp[:,tt+1][:,None]
 
-    #Definition of useful terms to compute Ks and sigmas (we're now considering affine dynamic's cost == 0)
-    MMt_inv = linalg.inv(RRt + BBt.T @ PPtp @ BBt)
-    mmt = rrt + BBt.T @ pptp
+    # Check positive definiteness of MMt_inv and mmt with apposite function: 
 
-    #Regularization is introduced in the NM for OC
+    if not is_pos_def(MMt_inv):
+       # regularization:
+       print('Regularization at time = {}'.format(tt))
+       MMt_inv += 0.5*np.eye(ni)
 
     KK[:,:,tt] = -MMt_inv@(BBt.T@PPtp@AAt + SSt)
     sigma_t = -MMt_inv@mmt
 
     sigma[:,tt] = sigma_t.squeeze()
 
-  '''#Trajectory computation: 
+  # Trajectory
   for tt in range(TT - 1):
-
+  
     uu[:, tt] = KK[:,:,tt]@xx[:, tt] + sigma[:,tt]
     xx_p = AA[:,:,tt]@xx[:,tt] + BB[:,:,tt]@uu[:, tt]
 
     xx[:,tt+1] = xx_p
 
     xxout = xx
-    uuout = uu '''
+    uuout = uu
 
-  return KK, sigma, PP
+  return KK, sigma, PP, xxout, uuout
