@@ -1,22 +1,44 @@
 # Bologna,  30/11/2024
-# Flexible Robotic Arm Task1: from a desired step trajectory to an optimal one
-# thanks to the regularized Newton's like Method (in its closed-loop version)
+# Flexible Robotic Arm Task1: from a desired step trajectory (that evolves from one equilibrium to
+# another) to an optimal one thanks to the regularized Newton's like Method (in its closed-loop version)
 
 from parameters import *
 from numpy import *
+from equilibria import getAnEquilibriumPoint
+from matplotlib import pyplot
+from trajectories import sigmoidTrajectory
+from methods import runNewtonMethod
+from dynamics import discretizedDynamicFRA as discretizedDynamicFuntion
+from costs import stageCostTrkTrj, termCostTrkTrj
 
 dt = dtCollection.task0_discretizationStep;
 T = TCollection.task1_trajectoryDuration;
 
 TT = int(T/dt) # number of time steps (each one of duration dt, enough for evolve from t=0 to t=T)
 
-# Definition of the desired trajectory (step from eq. point [0, 0, 0, 0]' to eq. point [pi, 0, 0, 0]')
-xx_des = zeros((ns, TT))
-uu_des = zeros((ni, TT))
-xx_des[0, int(TT/2):] = ones((1, int(TT/2)))*pi
+uu_equlibrium = 31.21523
+xx_equilibrium1 = getAnEquilibriumPoint(array([uu_equlibrium]), array([0, 0, 0, 0]))
+xx_equilibrium2 = getAnEquilibriumPoint(array([-uu_equlibrium]), array([0, 0, 0, 0]))
 
-# Notice: first of all, is needed the definition of a cost function l (with its jacobian and hessian wrt x and u)
+uu_des, tu = sigmoidTrajectory(T, T/2, array([uu_equlibrium]), array([-uu_equlibrium]), dt)
+xx_des, tx = sigmoidTrajectory(T, T/2, xx_equilibrium1, xx_equilibrium2, dt)
 
-# Now implements (in another file) N.M. with Armijo's rule, regularized, closed-loop version, in order to get a feasible opt trj.
-# At each iteration, evaluate dynamic, solve lambda co-state equation, compute descendent direction solving a LQOCP (considering
-# the regularized version), unpate the input (in closed-loop version) and then update the state running the dynamic!
+for i in range(0, ns):
+    pyplot.plot(tx, array(xx_des[i,:]), label='ϑ'+str(i)+' desired')
+pyplot.legend(); pyplot.show()
+pyplot.plot(tu, uu_des, label='u desired')
+pyplot.legend(); pyplot.show()
+
+QQ = 0.1*diag([100, 100, 1, 1])
+RR = 0.01*eye(ni)
+def stageCostFunctionFRA(xx, uu, xx_des, uu_des):
+    return stageCostTrkTrj(xx, uu, xx_des, uu_des, QQ, RR)
+def terminalCostFunctionFRA(xT, xT_des):
+    return termCostTrkTrj(xT, xT_des, QQ)
+newtonMethodMaxIterations = 100
+xx_opt, uu_opt = runNewtonMethod(
+   xx_des, uu_des, xx_equilibrium1, TT, newtonMethodMaxIterations,
+   discretizedDynamicFuntion, stageCostFunctionFRA, terminalCostFunctionFRA,
+   1e-3
+)
+

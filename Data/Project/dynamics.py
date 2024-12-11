@@ -1,4 +1,3 @@
-# Bologna,  28/11/2024
 # Flexible Robotic Arm Discretized Dynamics
 
 from numpy import *
@@ -10,10 +9,10 @@ def discretizedDynamicFRA(xx,uu):
     """
     Discretized Dynamics of the Flexible Robotic Arm
     Arguments:
-    - xx: 4x1 column vector state at time t x=[x0, x1, x2, x3]'=[ϑ1, ϑ2, dϑ1dt, dϑ2dt]'
-    - uu: 1x1 input value at time t
+    - xx: 4x1 column vector state at time t x=[x0, x1, x2, x3]'=[ϑ1, ϑ2, dϑ1dt, dϑ2dt]' (from a python variable p.o.f., this is of shape (4,))
+    - uu: 1x1 input value at time t (from a python variable p.o.f., this is oh shape (1,))
     Returns:
-    - xxp: 4x1 column vector state at time t+1
+    - xxp: 4x1 column vector state at time t+1 (from a python variable p.o.f., this is of shape (4,))
     - dfdx: 4x4 jacobian of the dynamics wrt x at xx,uu
     - dfdu: 4x1 jacobian of the dynamics wrt u at xx,uu
     - d2fdxdx: 4x4x4 hessian of the dynamics wrt x two times at xx,uu
@@ -123,6 +122,7 @@ def discretizedDynamicFRA(xx,uu):
     dfdu = zeros((ns, ni))
     dfdu[2:4, 0] = dt*invM@array([1, 0])
 
+    # We start defining all the Hessians' components:
     d2Cdx0x0 = array([0, 0])
     d2Gdx0x0 = array([
         -g*(m1*r1+m2*l1)*sin(xx[0])-g*m2*r2*sin(xx[0]+xx[1]),
@@ -216,4 +216,25 @@ def discretizedDynamicFRA(xx,uu):
     # Tensor hessian of the dynamics wrt u one time and x one time at xx,uu (d2fdxdu, 4x1x4)
     d2fdudx = zeros((ns, ni, ns))
 
-    return xxp, dfdx, dfdu, d2fdxdx, d2fdxdu, d2fdudx, d2fdudu
+    return xxp.squeeze(), dfdx, dfdu, d2fdxdx, d2fdxdu, d2fdudx, d2fdudu
+
+def runDynamicFunction(discretizedDynamicFuntion, uu, xx0, TT):
+    """
+    Generic implementation of a forward-in-time evolution (in an open loop fashon) of the dynamic of a certain system
+    Arguments:
+    - discretizedDynamicFuntion: functions of (xx_t, uu_t) that implements the discretized dynamics of the system that is being considered,
+                                     requiring as arguments respectively the state and input values at time t,
+                                     returning all the jacobians and hessians of the dynamics wrt them AND the state value at time t+1 in the following order:
+                                     xxp, dfdx, dfdu, d2fdxdx, d2fdxdu, d2fdudx, d2fdudu
+    - uu_des: column vector input curve (from a python variable p.o.f., this is of shape (ni,TT))
+    - xx0: column vector initial state (from a python variable p.o.f., this is of shape (ns,))
+    - TT: number of time steps (each one of duration dt, enough for evolve from t=0 to t=T, where [0, T] is the considered horizon)
+    Returns:
+    - xx: column vector state trajectory obtained by running the dynamic of the system (from a python variable p.o.f., this is of shape (ns,TT))
+    """
+
+    xx = zeros((len(xx0), TT))
+    xx[:,0] = xx0 # (notice: this is an assignment between shaped (ns,) python objects)
+    for tt in range(TT-1):
+        xx[:,tt+1] = discretizedDynamicFuntion(xx[:,tt], uu[:,tt])[0] # (notice: this is an assignment between shaped (ns,) python objects)
+    return xx

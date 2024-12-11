@@ -1,4 +1,3 @@
-# Bologna,  30/11/2024
 # Flexible Robotic Arm Parameters
 
 from types import SimpleNamespace

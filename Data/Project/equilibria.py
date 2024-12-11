@@ -5,7 +5,7 @@ from numpy import *
 from dynamics import discretizedDynamicFRA as f
 from parameters import *
 
-def getEquilibriumPoints(uu, xx0):
+def getAnEquilibriumPoint(uu, xx0):
     """
     Equilibrium points of the Flexible Robotic Arm for input uu.
     These points are computed using the Newton Method for zero root finding applied on the function
@@ -23,8 +23,8 @@ def getEquilibriumPoints(uu, xx0):
 
     uu = uu.squeeze() # remove eventually present singleton dimensions
 
-    maximumIteration = int(5e3)
-    stepsize = 1e-2
+    maximumIteration = int(5e4)
+    stepsize = e-2
     tolerance = 1e-10
     xx = zeros((ns, maximumIteration))
     xx[:,0] = xx0;
@@ -33,7 +33,7 @@ def getEquilibriumPoints(uu, xx0):
     for i in range(maximumIteration-1):
         
         xxp, dfdx, _, _, _, _, _ = f(xx[:,i], uu)
-        xxp = xxp - xx[:,i].reshape(ns, 1)
+        xxp = xxp - xx[:,i]
         dfdx = dfdx - eye(ns)
         direction = -linalg.inv(dfdx)@xxp;
         xx[:,i+1] = xx[:,i] + (stepsize*direction).reshape(1, ns);
@@ -48,35 +48,31 @@ def getEquilibriumPoints(uu, xx0):
     
     return xx[:,i+1];
 
-
-# Equilibrium points search (notice that different initial guesses lead to different equilibrium points):
-
-print("\nEquilibrium points FRA:")
-
-ϑ1_initial = pi - pi/180*20
-ϑ2_initial = 0
-print(getEquilibriumPoints(
-    array([0]),
-    array([ϑ1_initial, ϑ2_initial, 0, 0])
-));
-
-ϑ1_initial = pi - pi/180*20
-ϑ2_initial = -pi/180*135
-print(getEquilibriumPoints(
-    array([0]),
-    array([ϑ1_initial, ϑ2_initial, 0, 0])
-));
-
-ϑ1_initial = pi/180*20
-ϑ2_initial = pi - pi/180*20
-print(getEquilibriumPoints(
-    array([0]),
-    array([ϑ1_initial, ϑ2_initial, 0, 0])
-));
-
-ϑ1_initial = pi/180*20
-ϑ2_initial = pi/180*20
-print(getEquilibriumPoints(
-    array([0]),
-    array([ϑ1_initial, ϑ2_initial, 0, 0])
-));
+if __name__ == "__main__":
+    
+    # Equilibrium points search (notice that different initial guesses lead to different equilibrium points):
+    print("\nEquilibrium points FRA (for a null input):")
+    ϑ1_initial = pi - pi/180*20
+    ϑ2_initial = 0
+    print(getAnEquilibriumPoint(
+        array([0]),
+        array([ϑ1_initial, ϑ2_initial, 0, 0])
+    ))
+    ϑ1_initial = pi - pi/180*20
+    ϑ2_initial = -pi/180*135
+    print(getAnEquilibriumPoint(
+        array([0]),
+        array([ϑ1_initial, ϑ2_initial, 0, 0])
+    ))
+    ϑ1_initial = pi/180*20
+    ϑ2_initial = pi - pi/180*20
+    print(getAnEquilibriumPoint(
+        array([0]),
+        array([ϑ1_initial, ϑ2_initial, 0, 0])
+    ))
+    ϑ1_initial = pi/180*20
+    ϑ2_initial = pi/180*20
+    print(getAnEquilibriumPoint(
+        array([0]),
+        array([ϑ1_initial, ϑ2_initial, 0, 0])
+    ))
