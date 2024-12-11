@@ -160,7 +160,7 @@ def solveAffineLQP(AA, BB, QQ, RR, SS, QQT, TT, xx0, qq, rr, qqT):
     # Evaluate the optimal trajectory
     for tt in range(TT - 1):
         uu[:,tt] = KK[:,:,tt]@xx[:, tt] + sigma[:,tt]
-        xxp = AA[:,:,tt]@xx[:,tt] + BB[:,:,tt]@uu[:, tt]
+        xxp = AA[:,:,tt]@xx[:,tt] + BB[:,:,tt]@uu[:, tt] #here
         xx[:,tt+1] = xxp
         xxout = xx
         uuout = uu
