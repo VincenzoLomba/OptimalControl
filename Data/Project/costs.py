@@ -34,10 +34,10 @@ def stageCostTrkTrj(xx, uu, xx_des, uu_des, QQt, RRt):
     dldu = RRt@(uu-uu_des)
 
     d2ldxdx = QQt
-    d2ldxdu = zeros((ns, ni))
+    d2ldudx = zeros((ni, ns))
     d2ldudu = RRt
 
-    return squeeze(ll), dldx, dldu, d2ldxdx, d2ldxdu, d2ldudu
+    return squeeze(ll), dldx, dldu, d2ldxdx, d2ldudx, d2ldudu
 
 def termCostTrkTrj(xT, xT_des, QQT):
     """
