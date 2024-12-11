@@ -94,13 +94,15 @@ def solveCostateEquation(xx, uu, xx_des, uu_des, discretizedDynamicFuntion, stag
     RRtilde = zeros((uu.shape[0], uu.shape[0], TT))
     grdJdu = zeros_like(uu)
     qqT, QQT = terminalCostFunction(xx[:,TT-1], xx_des[:,TT-1])[1:3]
-    lmbda[:,TT-1] = qqT
+    lmbda[:,TT-1] = squeeze(qqT)
     for tt in reversed(range(TT-1)):
-        qq[:,tt], rr[:,tt], QQtilde[:,:,tt], SStilde[:,:,tt], RRtilde[:,:,tt] = stageCostFunction(xx[:,tt], uu[:,tt], xx_des[:,tt], uu_des[:,tt])[1:]
+        qq[:,tt] = squeeze(stageCostFunction(xx[:,tt], uu[:,tt], xx_des[:,tt], uu_des[:,tt])[1])
+        rr[:,tt] = squeeze(stageCostFunction(xx[:,tt], uu[:,tt], xx_des[:,tt], uu_des[:,tt])[2])
+        QQtilde[:,:,tt], SStilde[:,:,tt], RRtilde[:,:,tt] = stageCostFunction(xx[:,tt], uu[:,tt], xx_des[:,tt], uu_des[:,tt])[3:]
         QQtilde[:,:,tt] = QQtilde[:,:,tt].T
-        SStilde[:,:,tt] = SStilde[:,:,tt].T
+        #SStilde[:,:,tt] = SStilde[:,:,tt].T
         RRtilde[:,:,tt] = RRtilde[:,:,tt].T
-        AA[:,:,tt], BB[:,:,tt] = discretizedDynamicFuntion(xx[:,tt], uu[:,tt])[1:2]
+        AA[:,:,tt], BB[:,:,tt] = discretizedDynamicFuntion(xx[:,tt], uu[:,tt])[1:3]
         lmbda[:,tt] = qq[:,tt] + AA[:,:,tt].T@lmbda[:,tt]
         grdJdu[:,tt] = rr[:,tt] + BB[:,:,tt].T@lmbda[:,tt]
     return lmbda, AA, BB, qq, rr, qqT, QQtilde, SStilde, RRtilde, QQT, grdJdu
