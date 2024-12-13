@@ -1,4 +1,5 @@
 
+
 from numpy import *
 from dynamics import runDynamicFunction
 from costs import totalCostFunction
@@ -35,8 +36,9 @@ def runNewtonMethod(xx_des, uu_des, xx0, TT, maxIterations, discretizedDynamicFu
     xxCollection = zeros((xx_des.shape[0], TT, maxIterations))
     uuCollection = zeros((uu_des.shape[0], TT, maxIterations))
     descentDirectionNormCollection = zeros((maxIterations))
+    descendentArmijoDirection = zeros((maxIterations))
 
-    # Initialization of the N.M. with a feasible trajectory via shooting (running forward and in an open loop fashon the dynamic of the system)
+    # Initialization of the N.M. with a feasible trajectory via shooting (running forward and in an open loop fashion the dynamic of the system)
     uuCollection[:,:,0] = uu_des
     xxCollection[:,:,0] = runDynamicFunction(discretizedDynamicFuntion, uu_des, xx0, TT)
 
@@ -51,22 +53,31 @@ def runNewtonMethod(xx_des, uu_des, xx0, TT, maxIterations, discretizedDynamicFu
             xxCollection[:,:,k], uuCollection[:,:,k], xx_des, uu_des, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction, TT
         )
 
+        print(grdJdu.shape)
+
         # Solve the affine LQP that gives the descent direction (notice that the regularized version of the N.M. is considered)
         KK, sigma, _, _, deltau = solveAffineLQP(AA, BB, QQtilde, RRtilde, SStilde, QQT, TT, zeros_like(xx0), qq, rr, qqT)
+        print(deltau.shape)
         descentDirectionNormCollection[k] = linalg.norm(deltau)
+
+        # Computing Armijo descent direction:
+        for tt in reversed(range(TT-1)): 
+            descendentArmijoDirection[k] += grdJdu[:,tt].T@deltau[:,tt]
+
         if descentDirectionNormCollection[k] < tolerance:
             print("N.M. converged in {k} iterations!")
             break
 
         # Comuputing the stepsize with the Armijo's rule
         stepsize = armijoStepSize(
-            uuCollection[:,:,k], xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction
+            uuCollection[:,:,k], xx_des, uu_des, xx0, ll, deltau, descendentArmijoDirection[k], TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction
         )
 
         # State-input trajectory update (in closed-loop version)
         xxCollection[:,0,k+1] = xx0;
         for tt in range(TT-1):
-            uuCollection[:,tt,k+1] = uuCollection[:,tt,k] + KK[:,:,tt]@(xxCollection[:,tt,k+1] - xxCollection[:,tt,k]) + stepsize*sigma[:,tt]
+            uuCollection[:,tt,k+1] = uuCollection[:,tt,k] + stepsize*deltau[:,tt]
+            #uuCollection[:,tt,k+1] = uuCollection[:,tt,k] + KK[:,:,tt]@(xxCollection[:,tt,k+1] - xxCollection[:,tt,k]) + stepsize*sigma[:,tt]
             xxCollection[:,tt+1,k+1] = discretizedDynamicFuntion(xxCollection[:,tt,k+1], uuCollection[:,tt,k+1])[0]
 
     if k == maxIterations-1:
@@ -90,7 +101,7 @@ def solveCostateEquation(xx, uu, xx_des, uu_des, discretizedDynamicFuntion, stag
     qq = zeros_like(xx)
     rr = zeros_like(uu)
     QQtilde = zeros((xx.shape[0], xx.shape[0], TT))
-    SStilde = zeros((xx.shape[0], uu.shape[0], TT))
+    SStilde = zeros((uu.shape[0], xx.shape[0], TT))
     RRtilde = zeros((uu.shape[0], uu.shape[0], TT))
     grdJdu = zeros_like(uu)
     qqT, QQT = terminalCostFunction(xx[:,TT-1], xx_des[:,TT-1])[1:3]
@@ -111,7 +122,7 @@ def solveAffineLQP(AA, BB, QQ, RR, SS, QQT, TT, xx0, qq, rr, qqT):
     """ Affine Linear Quadratic Optimization Problem Solver """
 
     ns = AA.shape[0]
-    ni = BB.shape[0]
+    ni = BB.shape[1]
     KK = zeros((ni, ns, TT))
     sigma = zeros((ni, TT))
     PP = zeros((ns, ns, TT))
@@ -120,7 +131,7 @@ def solveAffineLQP(AA, BB, QQ, RR, SS, QQT, TT, xx0, qq, rr, qqT):
     uu = zeros((ni, TT))
     xx[:,0] = xx0
     PP[:,:,-1] = QQT
-    pp[:,-1] = qqT
+    pp[:,-1] = squeeze(qqT)
 
     # Solve the DRE for each time step
     for tt in reversed(range(TT-1)):
@@ -160,13 +171,14 @@ def solveAffineLQP(AA, BB, QQ, RR, SS, QQT, TT, xx0, qq, rr, qqT):
     # Evaluate the optimal trajectory
     for tt in range(TT - 1):
         uu[:,tt] = KK[:,:,tt]@xx[:, tt] + sigma[:,tt]
-        xxp = AA[:,:,tt]@xx[:,tt] + BB[:,:,tt]@uu[:, tt] #here
+        #print(AA[:,:,tt].shape, xx[:,tt].shape, BB[:,:,tt].shape)
+        xxp = AA[:,:,tt]@xx[:,tt] + BB[:,:,tt]@uu[:, tt]
         xx[:,tt+1] = xxp
         xxout = xx
         uuout = uu
     return KK, sigma, PP, xxout, uuout
 
-def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction):
+def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, descendentArmijoDirection, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction):
     """ Armijo's Rule for Step Size Selection """
 
     stepsizeInitialGuess = 1
@@ -176,24 +188,21 @@ def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedD
     ns = xx_des.shape[0]
     ni = uu_des.shape[0]
     armijoStepsizes = []
-    armijoStepsizesCosts = []
-    descendentArmijoDirection = grdJdu.T@deltau
+    armijoStepsizesCosts = [] 
+    #descendentArmijoDirection = grdJdu.T@deltau
+    #print(descendentArmijoDirection.shape)
 
     stepsize = stepsizeInitialGuess
     for ii in range(armijoMaximumIterations):
 
         xx_temp = zeros((ns,TT))
         uu_temp = zeros((ni,TT))
+        
         xx_temp[:,0] = xx0
         for tt in range(TT-1):
             uu_temp[:,tt] = uu[:,tt] + stepsize*deltau[:,tt]
             xx_temp[:,tt+1] = discretizedDynamicFuntion(xx_temp[:,tt], uu_temp[:,tt])[0]
-        JJ_temp = 0
-        for tt in range(TT-1):
-            temp_cost = stageCostFunction(xx_temp[:,tt], uu_temp[:,tt], xx_des[:,tt], uu_des[:,tt])[0]
-            JJ_temp += temp_cost
-        temp_cost = terminalCostFunction(xx_temp[:,-1], xx_temp[:,-1])[0]
-        JJ_temp += temp_cost
+        JJ_temp = totalCostFunction(xx_temp, uu_temp, xx_des, uu_des, TT, stageCostFunction, terminalCostFunction)
 
         armijoStepsizes.append(stepsize)
 
