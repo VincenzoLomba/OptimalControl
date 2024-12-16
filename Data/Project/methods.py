@@ -1,3 +1,6 @@
+############################
+######### METHODS ##########
+############################
 
 from numpy import *
 from dynamics import runDynamicFunction
@@ -13,9 +16,9 @@ def runNewtonMethod(xx_des, uu_des, xx0, TT, maxIterations, discretizedDynamicFu
     - TT: number of time steps (each one of duration dt, enough for evolve from t=0 to t=T, where [0, T] is the considered horizon)
     - maxIterations: maximum number of iterations for the method to converge
     - discretizedDynamicFuntion: functions of (xx_t, uu_t) that implements the discretized dynamics of the system that is being considered,
-                                 requiring as arguments respectively the state and input values at time t,
-                                 returning all the jacobians and hessians of the dynamics wrt them AND the state value at time t+1 in the following order:
-                                 xxp, dfdx, dfdu, d2fdxdx, d2fdxdu, d2fdudx, d2fdudu 
+                                    requiring as arguments respectively the state and input values at time t,
+                                    returning all the jacobians and hessians of the dynamics wrt them AND the state value at time t+1 in the following order:
+                                    xxp, dfdx, dfdu, d2fdxdx, d2fdxdu, d2fdudx, d2fdudu 
     - stageCostFunction: function of (xx_t, uu_t, xx_des_t, uu_des_t) that computes the stage cost requiring as arguments respectively:
                          trajectory state and input values at time t, desired state and input values at time t
     - terminalCostFunction: function of (xT, xT_des) that computes the terminal cost requiring as arguments respectively:
@@ -35,6 +38,7 @@ def runNewtonMethod(xx_des, uu_des, xx0, TT, maxIterations, discretizedDynamicFu
     xxCollection = zeros((xx_des.shape[0], TT, maxIterations))
     uuCollection = zeros((uu_des.shape[0], TT, maxIterations))
     descentDirectionNormCollection = zeros((maxIterations))
+    descendentArmijoDirection = zeros((maxIterations))
 
     # Initialization of the N.M. with a feasible trajectory via shooting (running forward and in an open loop fashion the dynamic of the system)
     uuCollection[:,:,0] = uu_des
@@ -43,34 +47,32 @@ def runNewtonMethod(xx_des, uu_des, xx0, TT, maxIterations, discretizedDynamicFu
     # Execution of the N.M. single step iteration (function of k, the iteration index)
     for k in range(maxIterations-1):
 
-        print("\nN.M. now approaching iteration {}...".format(k+1))
-        
-        print("Computing the actual cost...")
         # Compute the actual cost (at iteration k) of the trajectory xx,uu having xx_des, uu_des as desired curves
         ll = totalCostFunction(xxCollection[:,:,k], uuCollection[:,:,k], xx_des, uu_des, TT, stageCostFunction, terminalCostFunction)
-        print("Cost: ", ll)
 
         # Solve the costate equation
-        print("Solving the costate equation...")
-        _, AA, BB, qq, rr, qqT, QQtilde, SStilde, RRtilde, QQT, grdJdu = solveCostateEquation(
+        lmbda, AA, BB, qq, rr, qqT, QQtilde, SStilde, RRtilde, QQT, grdJdu = solveCostateEquation(
             xxCollection[:,:,k], uuCollection[:,:,k], xx_des, uu_des, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction, TT
         )
-        print("Costate equation solved!")
+
+        print(grdJdu.shape)
 
         # Solve the affine LQP that gives the descent direction (notice that the regularized version of the N.M. is considered)
-        print("Compute the descendend direction solving an Affine LQP...")
         KK, sigma, _, _, deltau = solveAffineLQP(AA, BB, QQtilde, RRtilde, SStilde, QQT, TT, zeros_like(xx0), qq, rr, qqT)
-        descentDirectionNormCollection[k] = linalg.norm(grdJdu)
-        print("Descent direction norm: {:.6}".format(descentDirectionNormCollection[k]))
-        print("Input varation to apply in norm: {:.6}".format(linalg.norm(deltau)))
+        print(deltau.shape)
+        descentDirectionNormCollection[k] = linalg.norm(deltau)
+
+        # Computing Armijo descent direction:
+        for tt in reversed(range(TT-1)): 
+            descendentArmijoDirection[k] += grdJdu[:,tt].T@deltau[:,tt]
+
         if descentDirectionNormCollection[k] < tolerance:
-            print("N.M. converged in {} iterations!".format(k+1))
+            print("N.M. converged in {k} iterations!")
             break
 
-        # Computing the stepsize with the Armijo's rule
-        print("Compute the stepsize with the Armijo's rule...")
+        # Comuputing the stepsize with the Armijo's rule
         stepsize = armijoStepSize(
-            uuCollection[:,:,k], xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction
+            uuCollection[:,:,k], xx_des, uu_des, xx0, ll, deltau, descendentArmijoDirection[k], TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction
         )
 
         # State-input trajectory update (in closed-loop version)
@@ -83,6 +85,7 @@ def runNewtonMethod(xx_des, uu_des, xx0, TT, maxIterations, discretizedDynamicFu
     if k == maxIterations-1:
         print("WARNING: the N.M. was not able to converge (not converging in {maxIterations} iterations!")
     return xxCollection[:,:,k], uuCollection[:,:,k]
+
 
 def solveCostateEquation(xx, uu, xx_des, uu_des, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction, TT):
     """
@@ -107,18 +110,17 @@ def solveCostateEquation(xx, uu, xx_des, uu_des, discretizedDynamicFuntion, stag
     qqT, QQT = terminalCostFunction(xx[:,TT-1], xx_des[:,TT-1])[1:3]
     lmbda[:,TT-1] = squeeze(qqT)
     for tt in reversed(range(TT-1)):
-        qqTemp, rrTemp, QQtildeTransposed, SStildeTransposed, RRtildeTransposed = stageCostFunction(
-            xx[:,tt], uu[:,tt], xx_des[:,tt], uu_des[:,tt]
-        )[1:]
-        qq[:,tt] = squeeze(qqTemp)
-        rr[:,tt] = squeeze(rrTemp)
-        QQtilde[:,:,tt] = QQtildeTransposed.T
-        SStilde[:,:,tt] = SStildeTransposed.T
-        RRtilde[:,:,tt] = RRtildeTransposed.T
+        qq[:,tt] = squeeze(stageCostFunction(xx[:,tt], uu[:,tt], xx_des[:,tt], uu_des[:,tt])[1])
+        rr[:,tt] = squeeze(stageCostFunction(xx[:,tt], uu[:,tt], xx_des[:,tt], uu_des[:,tt])[2])
+        QQtilde[:,:,tt], SStilde[:,:,tt], RRtilde[:,:,tt] = stageCostFunction(xx[:,tt], uu[:,tt], xx_des[:,tt], uu_des[:,tt])[3:]
+        QQtilde[:,:,tt] = QQtilde[:,:,tt].T
+        #SStilde[:,:,tt] = SStilde[:,:,tt].T
+        RRtilde[:,:,tt] = RRtilde[:,:,tt].T
         AA[:,:,tt], BB[:,:,tt] = discretizedDynamicFuntion(xx[:,tt], uu[:,tt])[1:3]
         lmbda[:,tt] = qq[:,tt] + AA[:,:,tt].T@lmbda[:,tt]
         grdJdu[:,tt] = rr[:,tt] + BB[:,:,tt].T@lmbda[:,tt]
     return lmbda, AA, BB, qq, rr, qqT, QQtilde, SStilde, RRtilde, QQT, grdJdu
+
 
 def solveAffineLQP(AA, BB, QQ, RR, SS, QQT, TT, xx0, qq, rr, qqT):
     """ Affine Linear Quadratic Optimization Problem Solver """
@@ -179,17 +181,75 @@ def solveAffineLQP(AA, BB, QQ, RR, SS, QQT, TT, xx0, qq, rr, qqT):
         uuout = uu
     return KK, sigma, PP, xxout, uuout
 
-def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction):
+
+def solveLinearLQP(AA, BB, QQ, RR, QQT, TT, xx0):
+    """
+	LQR for LTV system with (time-varying) cost	
+	
+    Args
+    - AA (nn x nn (x TT)) matrix
+    - BB (nn x mm (x TT)) matrix
+    - QQ (nn x nn (x TT)), RR (mm x mm (x TT)) stage cost
+    - QQf (nn x nn) terminal cost
+    - TT time horizon
+    Return
+    - KK (mm x nn x TT) optimal gain sequence
+    - PP (nn x nn x TT) riccati matrix
+    """
+	
+    ns = AA.shape[0]
+    ni = BB.shape[1]
+    PP = zeros((ns,ns,TT))
+    KK = zeros((ni,ns,TT))
+    xx = zeros((ns, TT))
+    uu = zeros((ni, TT))
+    xx[:,0] = xx0
+    PP[:,:,-1] = QQT
+    
+    # Solve Riccati equation
+    for tt in reversed(range(TT-1)):
+        QQt = QQ[:,:,tt]
+        RRt = RR[:,:,tt]
+        AAt = AA[:,:,tt]
+        BBt = BB[:,:,tt]
+        PPtp = PP[:,:,tt+1]
+        
+        PP[:,:,tt] = QQt + AAt.T@linalg.pinv(eye(ns) + PPtp@BBt@linalg.pinv(RRt) @ BBt.T)@PPtp@AAt
+    
+    # Evaluate KK
+    for tt in range(TT-1):
+        QQt = QQ[:,:,tt]
+        RRt = RR[:,:,tt]
+        AAt = AA[:,:,tt]
+        BBt = BB[:,:,tt]
+        PPtp = PP[:,:,tt+1]
+        
+        KK[:,:,tt] = - linalg.pinv(RRt + BBt.T@PPtp@BBt)@BBt.T@PPtp@AAt
+    
+    # Evaluate the optimal trajectory
+    for tt in range(TT - 1):
+        uu[:,tt] = KK[:,:,tt]@xx[:, tt]
+        xxp = AA[:,:,tt]@xx[:,tt] + BB[:,:,tt]@uu[:, tt]
+        xx[:,tt+1] = xxp
+        xxout = xx
+        uuout = uu
+
+    return KK, PP, xxout, uuout
+
+
+def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, descendentArmijoDirection, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction):
     """ Armijo's Rule for Step Size Selection """
 
     stepsizeInitialGuess = 1
-    armijoMaximumIterations = 14
-    armijoBeta = 0.3
-    armijoC = 0.1
+    armijoMaximumIterations = 50
+    armijoBeta = 0.7
+    armijoC = 0.5
     ns = xx_des.shape[0]
     ni = uu_des.shape[0]
     armijoStepsizes = []
-    armijoStepsizesCosts = []
+    armijoStepsizesCosts = [] 
+    #descendentArmijoDirection = grdJdu.T@deltau
+    #print(descendentArmijoDirection.shape)
 
     stepsize = stepsizeInitialGuess
     for ii in range(armijoMaximumIterations):
@@ -202,17 +262,61 @@ def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedD
             uu_temp[:,tt] = uu[:,tt] + stepsize*deltau[:,tt]
             xx_temp[:,tt+1] = discretizedDynamicFuntion(xx_temp[:,tt], uu_temp[:,tt])[0]
         JJ_temp = totalCostFunction(xx_temp, uu_temp, xx_des, uu_des, TT, stageCostFunction, terminalCostFunction)
-        print("Costo e passo temporanei: ", JJ_temp, stepsize)
 
         armijoStepsizes.append(stepsize)
-        armijoStepsizesCosts.append(JJ_temp)
 
-        if JJ_temp >= ll + armijoC*stepsize*dot(grdJdu, deltau):
+        if JJ_temp >= ll + armijoC*stepsize*descendentArmijoDirection:
             stepsize = armijoBeta*stepsize
         else:
-            print("Detected Armijo stepsize = {:.6e}".format(stepsize) + " (in {} iterations)".format(ii))
+            print("Detected Armijo stepsize = {:.3e}".format(stepsize) + " (in {ii} iterations)")
             break
         if ii == armijoMaximumIterations-1:
-            print("WARNING: no stepsize was found applying the Armijo's Rule (not converging in {} iterations)(last stepsize attempted: {})!".format(armijoMaximumIterations, stepsize))
+            print("WARNING: no stepsize was found applying the Armijo's Rule (not converging in {armijoMaximumIterations} iterations!")
 
     return stepsize
+
+
+def ComputeLocalLin(xx_star, uu_star, QQt, RRt, QQT, TT, Dynamics, solver_LQP): 
+    ns = xx_star.shape[0]
+    ni = uu_star.shape[0]
+    AA_star = zeros((ns, ns, TT))
+    BB_star = zeros((ns, ni, TT))
+
+    # Compute local linearization
+    for tt in range(TT): 
+        dfdx, dfdu = Dynamics(xx_star[:,tt], uu_star[:,tt])[1:]
+        AA_star[:,:,tt] = dfdx
+        BB_star[:,:,tt] = dfdu
+    
+    # Compute LQR gains
+    KK = solver_LQP(AA_star, BB_star, QQt, RRt, QQT, TT)[0]
+    return KK, AA_star, BB_star
+
+
+def GenerateNoise(xx, noise_std_percentage): 
+    # Compute standard deviation for each state row-wise
+    state_sd = std(xx, axis=1) # shape: (ns,)
+
+    # Scale the standard deviation by the percentage
+    noise_sd = state_sd*noise_std_percentage
+
+    # Generate Gaussian nois with zero mean and scaled (by percentage) std deviation for each state
+    noise = random.randn(*xx.shape)*noise_sd[:,newaxis]
+    return noise
+
+
+def SolveLQPwithNoise(xx_star, uu_star, KK, noise, TT, dynamics): 
+    ns = xx_star.shape[0]
+    ni = uu_star.shape[0]
+    xx_track = zeros((ns, TT))
+    uu_track = zeros((ni, TT))
+    xx_track[:,0] = xx_star[:,0] # Initializing the tracking trajectory as the optimal one
+    
+    for i in range(ns):
+        xx_track[i,0] += noise[i] # Adding the noise on the initial state to consider perturbed initial condition
+
+        for tt in range(TT): 
+            uu_track[:,tt] = uu_star[:, tt] + KK[:,:,tt]@(xx_track[:,tt] - xx_star[:,tt]) # Computing the controller using LQR gain in a closed loop fashion
+            xx_track[:,tt+1] = dynamics(xx_track[:,tt], uu_track[:,tt])
+
+    return xx_track, uu_track
