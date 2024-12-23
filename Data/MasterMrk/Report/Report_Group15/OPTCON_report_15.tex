@@ -1,0 +1,154 @@
+% Report for group 15
+% Eugenio Piccini
+% Francesco Davide Bossio
+% Mirko Legnini
+%
+\documentclass[a4paper,11pt,oneside]{report}
+\usepackage[latin1]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb,amsmath,color}
+\usepackage{cite}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{titlesec}
+\usepackage{placeins}
+\usepackage{animate}
+
+\titleformat{\chapter}[display]   
+{\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}   
+\titlespacing*{\chapter}{0pt}{-40pt}{40pt}
+
+% this alters "before" spacing (the second length argument) to 0
+\titlespacing*{\chapter}{0pt}{0pt}{40pt}
+
+\begin{document}
+\pagestyle{myheadings}
+
+%%%%%%%%%%% Cover %%%%%%%%%%%
+\thispagestyle{empty}                                                 
+\begin{center}                                                            
+    \vspace{5mm}
+    {\LARGE UNIVERSIT\`A DI BOLOGNA} \\                       
+      \vspace{5mm}
+\end{center}
+\begin{center}
+  \includegraphics[scale=.27]{figs/logo_unibo.png}
+\end{center}
+\begin{center}
+      \vspace{5mm}
+      {\LARGE School of Engineering} \\
+        \vspace{3mm}
+      {\Large Master Degree in Automation Engineering} \\
+      \vspace{20mm}
+      {\LARGE Optimal Control} \\
+      \vspace{5mm}{\Large\textbf{Course Project \#1 $-$ Group 15 \\ Optimal Control of a Vehicle}}                  
+      \vspace{15mm}
+\end{center}
+\begin{flushleft}                                                                              
+     {\large Professor: \textbf{\@ Giuseppe Notarstefano}} \\        
+      \vspace{13mm}
+\end{flushleft}
+\begin{flushright}
+      {\large Students:\\} Eugenio Piccini \\
+       Francesco Davide Bossio \\
+       Mirko Legnini\\
+\end{flushright}        
+\begin{center}
+\vfill
+      {\large Academic year \@2023/2024} \\
+\end{center}
+
+
+
+\newpage
+\thispagestyle{empty}
+
+%%%%%%%%%%% Abstract %%%%%%%%%%%%
+\begin{center}
+\chapter*{}
+\thispagestyle{empty}
+{\Huge \textbf{Abstract}}\\
+This project deals with the design and implementation of an 
+optimal control law for a simple bicycle model with static load transfer.\\
+Tasks involve dynamics discretization, trajectory generation 
+both with step and smooth change between two equilibria,
+trajectory tracking via LQR and MPC algorithms and at last an animation of the vehicle
+following the trajectory generated with the LQR algorithm.
+\vspace{15mm}
+\end{center}
+
+\tableofcontents \thispagestyle{empty}
+% \listoffigures\thispagestyle{empty}
+
+%%%%%%%%%% Introduction %%%%%%%%%%
+\chapter*{Introduction}
+\addcontentsline{toc}{chapter}{Introduction}
+In this project, we are required to design an optimal trajectory, so a sequence of state-input pairs (\textbf{x},\textbf{u})
+that satisfies the system dynamics and minimize a designed cost function, for a vehicle modeled by a bicycle model.\\
+In order to achieve this goal we will work on four different tasks:
+\begin{itemize}
+	\item Task 0 - Problem setup:
+Discretize and find the expression for the gradients of the system dynamics and code them. 
+
+    \item Task 1 - Step trajectory generation:
+Compute two equilibria of the system and define a reference (step) curve between the two.
+Compute the optimal transition between the two exploiting the Newton's-like algorithm for optimal control. 
+
+      \item Task 2 - Smooth trajectory generation:
+Use the same algorithm as above to track a smooth reference curve.
+
+    \item Task 3 - Trajectory tracking via LQR:
+Linearize the model around the optimal trajectory obtained before and define the optimal feedback controller
+to perform trajectory tracking via LQR algorithm.
+
+    \item Task 4 - Trajectory tracking via MPC:
+Perform trajectory tracking now using the MPC algorithm.
+
+    \item Task 5 - Animation:
+Produce a simple animation of the vehicle executing Task 3.
+\end{itemize}
+
+\section*{Contributions}
+
+
+
+%%%%%%%%%% Chapter Title %%%%%%%%%   
+
+\chapter{Task 0 - Problem setup}
+\input{Chapters/Task0}
+\chapter{Task 1 - Newton's method on step trajectory}
+\input{Chapters/Task1}
+\chapter{Task 2 - Newton's method on smooth trajectory}
+\input{Chapters/Task2}
+\chapter{Task 3 - Trajectory tracking via LQR}
+\input{Chapters/Task3}
+\chapter{Task 4 - Trajectory tracking via MPC}
+\input{Chapters/Task4}
+\chapter{Task 5 - Animation}
+\input{Chapters/Task5}
+%%%%%%%%%% Conclusions %%%%%%%%%%
+\chapter*{Conclusions}
+\addcontentsline{toc}{chapter}{Conclusions} 
+In conclusion this project focused on the use of Python to solve typical optimal control problems.
+
+\bigskip
+We modeled the dynamics and the first order derivatives in Task 0 to set-up the problem.\\
+In task 1 we computed two cornering equilibria and created a step desired curve with long tails.
+We proceeded to use a Newton's approximated algorithm with Armijo's step size selection to compute the optimal 
+trajectory.\\
+In task 2 we moved to a smooth desired curve and found the results to be better in terms of cost and inputs usage.\\
+Tasks 3 and 4 were about controlling with uncertainties around the optimal trajectory and we tested a linear 
+quadratic regulator and a model predictive controller to track the obtained smooth trajectory.\\
+In task 5 we animated the result obtained in task 3. 
+%%%%%%%%%% Bibliography %%%%%%%%%%%
+% \bibliography{bibfile}{}
+% \bibliographystyle{plain}
+% \addcontentsline{toc}{chapter}{Bibliography}
+
+% \nocite{*}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\end{document}

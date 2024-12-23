@@ -1,0 +1,24 @@
+\babel@toc {english}{}\relax 
+\contentsline {chapter}{Introduction}{5}{}%
+\contentsline {chapter}{\numberline {1}Task 0 - Problem setup}{6}{}%
+\contentsline {section}{\numberline {1.1}State space and control inputs}{6}{}%
+\contentsline {section}{\numberline {1.2}Forward Euler discretization}{7}{}%
+\contentsline {chapter}{\numberline {2}Task 1 - Newton's method on step trajectory}{9}{}%
+\contentsline {section}{\numberline {2.1}Equilibrium computation}{9}{}%
+\contentsline {section}{\numberline {2.2}Optimal trajectory via Newton's algorithm}{13}{}%
+\contentsline {section}{\numberline {2.3}Conclusions}{18}{}%
+\contentsline {chapter}{\numberline {3}Task 2 - Newton's method on smooth trajectory}{19}{}%
+\contentsline {section}{\numberline {3.1}Equilibrium computation and quasi-static pair}{19}{}%
+\contentsline {section}{\numberline {3.2}Newton's method on smooth curve}{23}{}%
+\contentsline {section}{\numberline {3.3}Conclusions}{27}{}%
+\contentsline {chapter}{\numberline {4}Task 3 - Trajectory tracking via LQR}{28}{}%
+\contentsline {section}{\numberline {4.1}Problem setup}{28}{}%
+\contentsline {section}{\numberline {4.2}Parameters and results}{28}{}%
+\contentsline {section}{\numberline {4.3}Conclusions}{36}{}%
+\contentsline {chapter}{\numberline {5}Task 4 - Trajectory tracking via MPC}{37}{}%
+\contentsline {section}{\numberline {5.1}Problem setup}{37}{}%
+\contentsline {section}{\numberline {5.2}Parameters}{37}{}%
+\contentsline {section}{\numberline {5.3}Results}{38}{}%
+\contentsline {section}{\numberline {5.4}Conclusions}{38}{}%
+\contentsline {chapter}{\numberline {6}Task 5 - Animation}{46}{}%
+\contentsline {chapter}{Conclusions}{48}{}%
