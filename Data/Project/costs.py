@@ -73,8 +73,8 @@ def totalCostFunction(xx, uu, xx_des, uu_des, TT, stageCostFunction, terminalCos
     - xx_des: column vector state desired curve (dimension: ns*TT)
     - uu_des: column vector input desired curve (dimension: ni*TT)
     - TT: number of time steps (each one of duration dt, enough for evolve from t=0 to t=T, where [0, T] is the considered horizon)
-    - stageCostFunction: function of (xx_t, uu_t, xx_des_t, uu_des_t, TT) that computes the stage cost requiring as arguments respectively:
-                         trajectory state and input at time t, desired state and input at time t, total number of time steps
+    - stageCostFunction: function of (xx_t, uu_t, xx_des_t, uu_des_t, t) that computes the stage cost requiring as arguments respectively:
+                         trajectory state and input at time t, desired state and input at time t
     - terminalCostFunction: function of (xT, xT_des) that computes the terminal cost requiring as arguments respectively:
                             trajectory terminal state value and desired terminal state value
     Returns:
@@ -82,5 +82,5 @@ def totalCostFunction(xx, uu, xx_des, uu_des, TT, stageCostFunction, terminalCos
     """
     ll = 0
     for tt in range(TT-1):
-        ll += stageCostFunction(xx[:,tt], uu[:,tt], xx_des[:,tt], uu_des[:,tt])[0]
+        ll += stageCostFunction(xx[:,tt], uu[:,tt], xx_des[:,tt], uu_des[:,tt], None)[0]
     return ll + terminalCostFunction(xx[:,-1], xx_des[:,-1])[0]

@@ -7,9 +7,8 @@ from numpy import *
 from equilibria import getAnEquilibriumPoint
 from matplotlib import pyplot
 from trajectories import *
-from methods import runNewtonMethod
+from methods import runNewtonMethodTrkTrj
 from dynamics import discretizedDynamicFRA as discretizedDynamicFuntion
-from costs import stageCostTrkTrj, termCostTrkTrj
 
 dt = dtCollection.task0_discretizationStep;
 T = TCollection.task1_trajectoryDuration;
@@ -20,21 +19,19 @@ uu_equlibrium = 31.21523
 xx_equilibrium1 = getAnEquilibriumPoint(array([uu_equlibrium]), array([0, 0, 0, 0]))
 xx_equilibrium2 = getAnEquilibriumPoint(array([-uu_equlibrium]), array([0, 0, 0, 0]))
 
-uu_des, tu = sigmoidTrajectory(T, T/2, array([uu_equlibrium]), array([-uu_equlibrium]), dt)
-xx_des, tx = sigmoidTrajectory(T, T/2, xx_equilibrium1, xx_equilibrium2, dt)
+deltsSigmoid = T/4*3
+uu_des, tu = sigmoidTrajectory(T, deltsSigmoid, array([uu_equlibrium]), array([-uu_equlibrium]), dt)
+xx_des, tx = sigmoidTrajectory(T, deltsSigmoid, xx_equilibrium1, xx_equilibrium2, dt)
 
 
-QQ = 0.1*diag([100, 100, 1, 1])
+QQ = diag([10, 10, 1, 1])
 RR = 0.01*eye(ni)
-def stageCostFunctionFRA(xx, uu, xx_des, uu_des):
-    return stageCostTrkTrj(xx, uu, xx_des, uu_des, QQ, RR)
-def terminalCostFunctionFRA(xT, xT_des):
-    return termCostTrkTrj(xT, xT_des, QQ)
-newtonMethodMaxIterations = 10
-xx_opt, uu_opt = runNewtonMethod(
+QQT = diag([10, 10, 10, 10])
+newtonMethodMaxIterations = 120
+xx_opt, uu_opt = runNewtonMethodTrkTrj(
    xx_des, uu_des, xx_equilibrium1, TT, newtonMethodMaxIterations,
-   discretizedDynamicFuntion, stageCostFunctionFRA, terminalCostFunctionFRA,
-   1e-3
+   discretizedDynamicFuntion, 1e-4,
+   QQ, RR, QQT
 )
 
 for i in range(0, ns):

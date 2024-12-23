@@ -223,9 +223,9 @@ def runDynamicFunction(discretizedDynamicFuntion, uu, xx0, TT):
     Generic implementation of a forward-in-time evolution (in an open loop fashon) of the dynamic of a certain system
     Arguments:
     - discretizedDynamicFuntion: functions of (xx_t, uu_t) that implements the discretized dynamics of the system that is being considered,
-                                     requiring as arguments respectively the state and input values at time t,
-                                     returning all the jacobians and hessians of the dynamics wrt them AND the state value at time t+1 in the following order:
-                                     xxp, dfdx, dfdu, d2fdxdx, d2fdxdu, d2fdudx, d2fdudu
+                                 requiring as arguments respectively the state and input values at time t,
+                                 returning the state value at time t+1 AND all the jacobians and hessians of the dynamics wrt state and input in the following order:
+                                 xxp, dfdx, dfdu, d2fdxdx, d2fdxdu, d2fdudx, d2fdudu
     - uu_des: column vector input curve (from a python variable p.o.f., this is of shape (ni,TT))
     - xx0: column vector initial state (from a python variable p.o.f., this is of shape (ns,))
     - TT: number of time steps (each one of duration dt, enough for evolve from t=0 to t=T, where [0, T] is the considered horizon)
