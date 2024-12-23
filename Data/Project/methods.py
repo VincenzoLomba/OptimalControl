@@ -1,3 +1,6 @@
+############################
+######### METHODS ##########
+############################
 
 from numpy import *
 from builtins import all
@@ -75,7 +78,7 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
 
         print("Computing the stepsize exploiting the Armijo's rule...")
         stepsize = armijoStepSize(
-            uuCollection[:,:,k], xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction
+            uuCollection[:,:,k], xx_des, uu_des, xx0, ll, deltau, descendentArmijoDirection[k], TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction
         )
 
         # State-input trajectory update (in closed-loop version)
@@ -134,6 +137,7 @@ def solveCostateEquationTrkTrj(xx, uu, xx_des, uu_des, discretizedDynamicFuntion
         lmbda[:,tt] = qq[:,tt] + AA[:,:,tt].T@lmbda[:,tt+1]
         grdJdu[:,tt] = rr[:,tt] + BB[:,:,tt].T@lmbda[:,tt+1]
     return lmbda, AA, BB, qq, rr, qqT, QQtilde, SStilde, RRtilde, QQT, grdJdu, ll
+
 
 def solveAffineLQP(AA, BB, QQ, RR, SS, QQT, TT, xx0, qq, rr, qqT):
     """ Affine Linear Quadratic Optimization Problem Solver """
@@ -194,7 +198,63 @@ def solveAffineLQP(AA, BB, QQ, RR, SS, QQT, TT, xx0, qq, rr, qqT):
         uuout = uu
     return KK, sigma, PP, xxout, uuout
 
-def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction):
+
+def solveLinearLQP(AA, BB, QQ, RR, QQT, TT, xx0):
+    """
+	LQR for LTV system with (time-varying) cost	
+	
+    Args
+    - AA (nn x nn (x TT)) matrix
+    - BB (nn x mm (x TT)) matrix
+    - QQ (nn x nn (x TT)), RR (mm x mm (x TT)) stage cost
+    - QQf (nn x nn) terminal cost
+    - TT time horizon
+    Return
+    - KK (mm x nn x TT) optimal gain sequence
+    - PP (nn x nn x TT) riccati matrix
+    """
+	
+    ns = AA.shape[0]
+    ni = BB.shape[1]
+    PP = zeros((ns,ns,TT))
+    KK = zeros((ni,ns,TT))
+    xx = zeros((ns, TT))
+    uu = zeros((ni, TT))
+    xx[:,0] = xx0
+    PP[:,:,-1] = QQT
+    
+    # Solve Riccati equation
+    for tt in reversed(range(TT-1)):
+        QQt = QQ[:,:,tt]
+        RRt = RR[:,:,tt]
+        AAt = AA[:,:,tt]
+        BBt = BB[:,:,tt]
+        PPtp = PP[:,:,tt+1]
+        
+        PP[:,:,tt] = QQt + AAt.T@linalg.pinv(eye(ns) + PPtp@BBt@linalg.pinv(RRt) @ BBt.T)@PPtp@AAt
+    
+    # Evaluate KK
+    for tt in range(TT-1):
+        QQt = QQ[:,:,tt]
+        RRt = RR[:,:,tt]
+        AAt = AA[:,:,tt]
+        BBt = BB[:,:,tt]
+        PPtp = PP[:,:,tt+1]
+        
+        KK[:,:,tt] = - linalg.pinv(RRt + BBt.T@PPtp@BBt)@BBt.T@PPtp@AAt
+    
+    # Evaluate the optimal trajectory
+    for tt in range(TT - 1):
+        uu[:,tt] = KK[:,:,tt]@xx[:, tt]
+        xxp = AA[:,:,tt]@xx[:,tt] + BB[:,:,tt]@uu[:, tt]
+        xx[:,tt+1] = xxp
+        xxout = xx
+        uuout = uu
+
+    return KK, PP, xxout, uuout
+
+
+def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, descendentArmijoDirection, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction):
     """ Armijo's Rule for Step Size Selection """
 
     stepsizeInitialGuess = 1
@@ -248,6 +308,52 @@ def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedD
     plt.show()
 
     return stepsize
+
+
+def ComputeLocalLin(xx_star, uu_star, QQt, RRt, QQT, TT, Dynamics, solver_LQP): 
+    ns = xx_star.shape[0]
+    ni = uu_star.shape[0]
+    AA_star = zeros((ns, ns, TT))
+    BB_star = zeros((ns, ni, TT))
+
+    # Compute local linearization
+    for tt in range(TT): 
+        dfdx, dfdu = Dynamics(xx_star[:,tt], uu_star[:,tt])[1:]
+        AA_star[:,:,tt] = dfdx
+        BB_star[:,:,tt] = dfdu
+    
+    # Compute LQR gains
+    KK = solver_LQP(AA_star, BB_star, QQt, RRt, QQT, TT)[0]
+    return KK, AA_star, BB_star
+
+
+def GenerateNoise(xx, noise_std_percentage): 
+    # Compute standard deviation for each state row-wise
+    state_sd = std(xx, axis=1) # shape: (ns,)
+
+    # Scale the standard deviation by the percentage
+    noise_sd = state_sd*noise_std_percentage
+
+    # Generate Gaussian nois with zero mean and scaled (by percentage) std deviation for each state
+    noise = random.randn(*xx.shape)*noise_sd[:,newaxis]
+    return noise
+
+
+def SolveLQPwithNoise(xx_star, uu_star, KK, noise, TT, dynamics): 
+    ns = xx_star.shape[0]
+    ni = uu_star.shape[0]
+    xx_track = zeros((ns, TT))
+    uu_track = zeros((ni, TT))
+    xx_track[:,0] = xx_star[:,0] # Initializing the tracking trajectory as the optimal one
+    
+    for i in range(ns):
+        xx_track[i,0] += noise[i] # Adding the noise on the initial state to consider perturbed initial condition
+
+        for tt in range(TT): 
+            uu_track[:,tt] = uu_star[:, tt] + KK[:,:,tt]@(xx_track[:,tt] - xx_star[:,tt]) # Computing the controller using LQR gain in a closed loop fashion
+            xx_track[:,tt+1] = dynamics(xx_track[:,tt], uu_track[:,tt])
+
+    return xx_track, uu_track
 
 def solveARE(A, B, Q, R, S):
     # https://en.wikipedia.org/wiki/Linear%E2%80%93quadratic_regulator#Infinite-horizon,_discrete-time
