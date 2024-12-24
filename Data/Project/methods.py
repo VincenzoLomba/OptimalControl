@@ -43,13 +43,15 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
     # Initialization of the collections
     xxCollection = zeros((xx_des.shape[0], TT, maxIterations))
     uuCollection = zeros((uu_des.shape[0], TT, maxIterations))
+    stepSizeCollection = zeros((maxIterations))
 
     # Initialization of the N.M. with a feasible trajectory via shooting (running forward and in an open loop fashion the dynamic of the system)
     uuCollection[:,:,0] = uu_des
     xxCollection[:,:,0] = runDynamicFunction(discretizedDynamicFuntion, uu_des, xx0, TT)
 
     # Execution of the N.M. single step iteration (where k is the iteration index)
-    for k in range(maxIterations):
+    k = 0
+    while k < maxIterations:
 
         print("\n[E] N.M. now approaching iteration ", format(k+1))
 
@@ -74,17 +76,28 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
             break
 
         print("Computing the stepsize exploiting the Armijo's rule...")
-        stepsize = armijoStepSize(
-            uuCollection[:,:,k], xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction
+        stepSizeCollection[k] = armijoStepSize(
+            uuCollection[:,:,k], xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction,
+            stepSizeCollection[k] if (k < maxIterations - 1 and stepSizeCollection[k+1] < 0) else None
         )
+        if stepSizeCollection[k] < 0:
+            if k > 0:
+                print("Rolling-back to the previous iteration and choosing a smaller stepsize (smaller w.r.t {})".format(stepSizeCollection[k-1]))
+                k -= 1
+                continue
+            else:
+                print("WARNING: already in the first iteration of the N.M., it was not possible to determine a step size using the Armijo method!")
+                break
 
         # State-input trajectory update (in closed-loop version)
         xxCollection[:,0,k+1] = xx0;
         for tt in range(TT-1):
-            uuCollection[:,tt,k+1] = uuCollection[:,tt,k] + stepsize*deltau[:,tt]
+            uuCollection[:,tt,k+1] = uuCollection[:,tt,k] + stepSizeCollection[k]*deltau[:,tt]
             #uuCollection[:,tt,k+1] = uuCollection[:,tt,k] + KK[:,:,tt]@(xxCollection[:,tt,k+1] - xxCollection[:,tt,k]) + stepsize*sigma[:,tt]
             xxCollection[:,tt+1,k+1] = discretizedDynamicFuntion(xxCollection[:,tt,k+1], uuCollection[:,tt,k+1])[0]
-        uuCollection[:,TT-1,k+1] = uuCollection[:,TT-1,k] + stepsize*deltau[:,TT-1]
+        uuCollection[:,TT-1,k+1] = uuCollection[:,TT-1,k] + stepSizeCollection[k]*deltau[:,TT-1]
+
+        k += 1
 
     if k >= maxIterations-1:
         print("WARNING: the N.M. was not able to converge (not converging in ", maxIterations, " iterations)!")
@@ -251,10 +264,9 @@ def solveLinearLQP(AA, BB, QQ, RR, QQT, TT, xx0):
     return KK, PP, xxout, uuout
 
 
-def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction):
+def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction, stepsizeInitialGuess=None):
     """ Armijo's Rule for Step Size Selection """
 
-    stepsizeInitialGuess = 1
     armijoMaximumIterations = 14 # sufficient to attempt a stepsize of 0.01
     armijoBeta = 0.7
     armijoC = 0.5
@@ -267,7 +279,8 @@ def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedD
     print("Armijo line pendence {:.5f}: ({:.1f}° between deltau and grdJu)".format(
         armijoLinePendence, rad2deg(arccos(armijoLinePendence/linalg.norm(deltau)/linalg.norm(grdJdu)))
     ))
-    stepsize = float(stepsizeInitialGuess)
+    stepsize = float(1 if (stepsizeInitialGuess is None) else stepsizeInitialGuess*armijoBeta*armijoBeta)
+    print("Using as initial guess for the Armijo stepsize: {:.10}".format(stepsize))
     for ii in range(armijoMaximumIterations):
 
         tempxx = zeros((ns,TT))
@@ -289,6 +302,7 @@ def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedD
             break
         if ii == armijoMaximumIterations-1:
             print("WARNING: no stepsize was found applying the Armijo's Rule (not converging in {} iterations)(last stepsize attempted: {:.10})!".format(armijoMaximumIterations, stepsize))
+            stepsize = -1
 
     armijoStepsizes.append(0)
     armijoCosts.append(ll)
@@ -323,6 +337,14 @@ def ComputeLocalLin(xx_star, uu_star, QQt, RRt, QQT, TT, Dynamics, solver_LQP):
     KK = solver_LQP(AA_star, BB_star, QQt, RRt, QQT, TT)[0]
     return KK, AA_star, BB_star
 
+def solveARE(A, B, Q, R, S):
+    # https://en.wikipedia.org/wiki/Linear%E2%80%93quadratic_regulator#Infinite-horizon,_discrete-time
+    augmented = (S is not None) and (not (all((x == 0 or x == None) for x in S.flatten())))
+    if augmented:
+        aA = A - B@linalg.pinv(R)@S.T
+        aQ = Q - S@linalg.pinv(R)@S.T
+        return dare(aA, B, aQ, R)[0]
+    else: return dare(A, B, Q, R)[0]
 
 def GenerateNoise(xx, noise_std_percentage): 
     # Compute standard deviation for each state row-wise
@@ -351,12 +373,3 @@ def SolveLQPwithNoise(xx_star, uu_star, KK, noise, TT, dynamics):
             xx_track[:,tt+1] = dynamics(xx_track[:,tt], uu_track[:,tt])
 
     return xx_track, uu_track
-
-def solveARE(A, B, Q, R, S):
-    # https://en.wikipedia.org/wiki/Linear%E2%80%93quadratic_regulator#Infinite-horizon,_discrete-time
-    augmented = not (all((x == 0 or x == None) for x in S.flatten()))
-    if augmented:
-        aA = A - B@linalg.pinv(R)@S.T
-        aQ = Q - S@linalg.pinv(R)@S.T
-        return dare(aA, B, aQ, R)[0]
-    else: return dare(A, B, Q, R)[0]
