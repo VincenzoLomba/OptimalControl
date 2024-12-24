@@ -25,16 +25,23 @@ xx_des, tx = sigmoidTrajectory(T, deltsSigmoid, xx_equilibrium1, xx_equilibrium2
 
 
 QQ = diag([10, 10, 1, 1])
-RR = 0.01*eye(ni)
+# RR = 0.01*eye(ni)
+
+RR = zeros((ni, ni, TT))
+sl = int(TT/16)
+RR[:,:,0:sl] = 1000000*eye(ni)
+RR[:,:,sl:TT-sl] = 0.01*eye(ni)
+RR[:,:,TT-sl:TT] = 1000000*eye(ni)
+
 QQT = 100000*diag([10, 10, 10, 10])
-newtonMethodMaxIterations = 120
+newtonMethodMaxIterations = 240
 xx_opt, uu_opt = runNewtonMethodTrkTrj(
    xx_des, uu_des, xx_equilibrium1, TT, newtonMethodMaxIterations,
-   discretizedDynamicFuntion, 1e-8,
+   discretizedDynamicFuntion, 1e-4,
    QQ, RR, QQT
 )
 
-figure()
+pyplot.figure()
 for i in range(0, ns):
     pyplot.plot(tx, array(xx_des[i,:]), label='ϑ'+str(i)+' desired')
 pyplot.legend(); pyplot.show()

@@ -82,5 +82,5 @@ def totalCostFunction(xx, uu, xx_des, uu_des, TT, stageCostFunction, terminalCos
     """
     ll = 0
     for tt in range(TT-1):
-        ll += stageCostFunction(xx[:,tt], uu[:,tt], xx_des[:,tt], uu_des[:,tt], None)[0]
+        ll += stageCostFunction(xx[:,tt], uu[:,tt], xx_des[:,tt], uu_des[:,tt], tt)[0]
     return ll + terminalCostFunction(xx[:,-1], xx_des[:,-1])[0]

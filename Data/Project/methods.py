@@ -25,6 +25,11 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
                                  returning the state value at time t+1 AND all the jacobians and hessians of the dynamics wrt state and input in the following order:
                                  xxp, dfdx, dfdu, d2fdxdx, d2fdxdu, d2fdudx, d2fdudu
     - tolerance: minimum value that the norm of the descent direction has to reach to consider the optimization as converged and completed
+    - QQ: nsxns stage state cost matrix (if time invariant) or nsxnsxTT stage state cost tensor (if time variant)
+    - RR: nixni stage input cost matrix (if time invariant) or nixnixTT stage input cost tensor (if time variant)
+    - givenQQT: nsxns terminal state cost matrix (if None, the solution of the ARE is used for the terminal cost)
+    - givenFixedStepsize: fixed stepsize to use for the optimization (if None, the Armijo's rule is exploited to compute the stepsize)
+
     Returns:
     - xx: column vector state (feasible) trajectory obtained through the optimization (coupled with uu; returning a state-input trajectory)
     - uu: column vector input (feasible) trajectory obtained through the optimization (coupled with xx; returning a state-input trajectory)
@@ -37,8 +42,10 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
     if (xx_des.ndim == 1): ns = 1; xx_des = xx_des.reshape(ns, xx_des.shape[0])
 
     # Definition the stage cost function at the generic istant of time t (time invariant cost matrixes QQ and RR are considered here)
+    if (QQ.ndim < 3): QQ = repeat(QQ[:, :, newaxis], TT, axis=2)
+    if (RR.ndim < 3): RR = repeat(QQ[:, :, newaxis], TT, axis=2)
     def stageCostFunction(xx_t, uu_t, xx_des_t, uu_des_t, t):
-        return stageCostTrkTrj(xx_t, uu_t, xx_des_t, uu_des_t, QQ, RR)
+        return stageCostTrkTrj(xx_t, uu_t, xx_des_t, uu_des_t, QQ[:,:,t], RR[:,:,t])
 
     # Initialization of the collections
     xxCollection = zeros((xx_des.shape[0], TT, maxIterations))
@@ -114,7 +121,7 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
             )
             print("After exploiting the Armijo's rule, using as stepsize: {:.10}".format(stepsize))
         else:
-            print("Using as stepsize the given fixed value: {:.10}".format(stepsize))
+            print("Using as stepsize the given fixed value: {:.10}".format(givenFixedStepsize))
             stepsize = givenFixedStepsize
 
         print("Updating the state-input trajectory (in closed-loop version)")
@@ -157,7 +164,7 @@ def solveCostateEquationTrkTrj(xx, uu, xx_des, uu_des, discretizedDynamicFuntion
     ll = 0
     for tt in reversed(range(TT-1)):
         llTemp, qqTemp, rrTemp, QQtildeTransposed, SStildeTransposed, RRtildeTransposed = stageCostFunction(
-            xx[:,tt], uu[:,tt], xx_des[:,tt], uu_des[:,tt], None
+            xx[:,tt], uu[:,tt], xx_des[:,tt], uu_des[:,tt], tt
         )
         ll += llTemp
         qq[:,tt] = squeeze(qqTemp)
