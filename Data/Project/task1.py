@@ -26,34 +26,31 @@ xx_des, tx = sigmoidTrajectory(T, deltsSigmoid, xx_equilibrium1, xx_equilibrium2
 
 QQ = diag([10, 10, 1, 1])
 RR = 0.01*eye(ni)
-QQT = diag([10, 10, 10, 10])
+QQT = 100000*diag([10, 10, 10, 10])
 newtonMethodMaxIterations = 120
 xx_opt, uu_opt = runNewtonMethodTrkTrj(
    xx_des, uu_des, xx_equilibrium1, TT, newtonMethodMaxIterations,
-   discretizedDynamicFuntion, 1e-4,
+   discretizedDynamicFuntion, 1e-8,
    QQ, RR, QQT
 )
 
+figure()
 for i in range(0, ns):
     pyplot.plot(tx, array(xx_des[i,:]), label='ϑ'+str(i)+' desired')
 pyplot.legend(); pyplot.show()
 pyplot.plot(tu, uu_des, label='u desired')
 pyplot.legend(); pyplot.show()
-
 fig, ax = pyplot.subplots()
-
-for i in range(ns-2):
+for i in range(ns):
     line_des, = ax.plot(tx, xx_des[i, :], label='ϑ' + str(i) + ' desired')
     color = line_des.get_color()
     ax.plot(tx, xx_opt[i, :], '--', color=color, label='ϑ' + str(i) + ' optimal')
-
-ax.legend()
+ax.legend(loc='upper left')
 pyplot.show()
-
 fig, ax = pyplot.subplots()
 line_u_des, = ax.plot(tu, uu_des, label='u desired')
 color_u = line_u_des.get_color()
 ax.plot(tu, uu_opt[0, :], '--', color=color_u, label='u optimal')
-
 ax.legend()
+pyplot.show()
 pyplot.show()

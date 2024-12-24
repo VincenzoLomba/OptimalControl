@@ -207,11 +207,11 @@ def discretizedDynamicFRA(xx,uu):
     d2fdxdx[2:4, 3, 2] = dt*(invM@(-d2Gdx3x2-d2Cdx3x2))
     d2fdxdx[2:4, 3, 3] = dt*(invM@(-d2Gdx3x3-d2Cdx3x3))
 
-    # Tensor hessian of the dynamics wrt u two times at xx,uu (d2fdu2, 4x1)
-    d2fdudu = zeros((ns, ni))
+    # Tensor hessian of the dynamics wrt u two times at xx,uu (d2fdu2, 4x1x1)
+    d2fdudu = zeros((ns, ni, ni))
     
-    # Tensor hessian of the dynamics wrt x one time and u one time at xx,uu (d2fdxdu, 4x4)
-    d2fdxdu = zeros((ns, ns))
+    # Tensor hessian of the dynamics wrt x one time and u one time at xx,uu (d2fdxdu, 4x4x1)
+    d2fdxdu = zeros((ns, ns, ni))
 
     # Tensor hessian of the dynamics wrt u one time and x one time at xx,uu (d2fdxdu, 4x1x4)
     d2fdudx = zeros((ns, ni, ns))

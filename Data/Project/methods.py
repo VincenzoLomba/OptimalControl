@@ -6,7 +6,7 @@ from dynamics import runDynamicFunction
 from costs import totalCostFunction, stageCostTrkTrj, termCostTrkTrj
 from matplotlib import pyplot as plt
 
-def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDynamicFuntion, tolerance, QQ, RR, givenQQT=None):
+def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDynamicFuntion, tolerance, QQ, RR, givenQQT=None, givenFixedStepsize=None):
     """
     Newton's Like Method in closed loop version for an Optimal Control Trajectory Tracking Problem
     Arguments:
@@ -43,7 +43,6 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
     # Initialization of the collections
     xxCollection = zeros((xx_des.shape[0], TT, maxIterations))
     uuCollection = zeros((uu_des.shape[0], TT, maxIterations))
-    stepSizeCollection = zeros((maxIterations))
 
     # Initialization of the N.M. with a feasible trajectory via shooting (running forward and in an open loop fashion the dynamic of the system)
     uuCollection[:,:,0] = uu_des
@@ -56,7 +55,7 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
         print("\n[E] N.M. now approaching iteration ", format(k+1))
 
         print("Solving the costate equation (and computing all involved quantities)...")
-        _, AA, BB, qq, rr, qqT, QQtilde, SStilde, RRtilde, QQT, grdJdu, ll = solveCostateEquationTrkTrj(
+        lmbda, AA, BB, QQext, SSext, RRext, qq, rr, qqT, QQtilde, SStilde, RRtilde, QQT, grdJdu, ll = solveCostateEquationTrkTrj(
             xxCollection[:,:,k], uuCollection[:,:,k], xx_des, uu_des, discretizedDynamicFuntion, stageCostFunction, TT, givenQQT
         )
 
@@ -64,40 +63,66 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
 
         # Definition the terminal cost function at time T (for this particular N.M. iteration)
         def terminalCostFunction(xT, xT_des): return termCostTrkTrj(xT, xT_des, QQT)
-        
-        print("Solving the affine LQP that gives the descent direction (regularized version of the N.M. is considered)...")
-        KK, sigma, _, _, deltau = solveAffineLQP(AA, BB, QQtilde, RRtilde, SStilde, QQT, TT, zeros_like(xx0), qq, rr, qqT)
+
+        print("Computing the matrices for the affine LQP that gives the descent direction (and checking if regularization is needed)...")
+        regularizationNeeded = False
+        LQQQ = QQtilde
+        LQSS = SStilde
+        LQRR = RRtilde
+        for tt in range(TT-1):
+            for ii in range(ns):
+                LQQQ[:,:,tt] += QQext[ii,:,:,tt]*lmbda[ii,tt+1]
+            if not isAPositiveDefiniteMatrix(LQQQ[:,:,tt]):
+                regularizationNeeded = True
+                LQQQ = QQtilde
+                break
+            else:
+                for ii in range(ns):
+                    LQSS[:,:,tt] += SSext[ii,:,:,tt]*lmbda[ii,tt+1]
+                if not isAPositiveDefiniteMatrix(LQSS[:,:,tt]):
+                    regularizationNeeded = True
+                    LQQQ = QQtilde
+                    LQSS = SStilde
+                    break
+                else:
+                    for ii in range(ni):
+                        LQRR[:,:,tt] += RRext[ii,:,:,tt]*lmbda[ii,tt+1]
+                    if not isAPositiveDefiniteMatrix(LQRR[:,:,tt]):
+                        regularizationNeeded = True
+                        LQQQ = QQtilde
+                        LQSS = SStilde
+                        LQRR = RRtilde
+                        break
+
+        print("Solving the affine LQP that gives the descent direction {}...".format(
+            "(regularized version of the N.M. is considered, cause needed)" if regularizationNeeded else ""
+        ))
+        KK, sigma, _, _, deltau = solveAffineLQP(AA, BB, LQQQ, LQRR, LQSS, QQT, TT, zeros_like(xx0), qq, rr, qqT)
         descentDirectionNorm = linalg.norm(grdJdu)
-        print("Descent direction norm (||-gradJ(u)||): {:.6f}".format(descentDirectionNorm))
-        print("Input varation norm given by the N.M. (||deltau||): {:.6f}".format(linalg.norm(deltau)))
+        print("Descent direction norm (||-gradJ(u)||): {:.12f}".format(descentDirectionNorm))
+        print("Input varation norm given by the N.M. (||deltau||): {:.12f}".format(linalg.norm(deltau)))
 
         if descentDirectionNorm < tolerance:
             print("The N.M. successfully converged in ", k+1, " iterations!")
             break
+        
+        if givenFixedStepsize is None:
+            print("Computing the stepsize exploiting the Armijo's rule...")
+            stepsize = armijoStepSize(
+                uuCollection[:,:,k], xxCollection[:,:,k],xx_des, uu_des, xx0, ll, deltau, grdJdu, KK, sigma, TT, discretizedDynamicFuntion,
+                stageCostFunction, terminalCostFunction
+            )
+            print("After exploiting the Armijo's rule, using as stepsize: {:.10}".format(stepsize))
+        else:
+            print("Using as stepsize the given fixed value: {:.10}".format(stepsize))
+            stepsize = givenFixedStepsize
 
-        print("Computing the stepsize exploiting the Armijo's rule...")
-        stepSizeCollection[k] = armijoStepSize(
-            uuCollection[:,:,k], xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction,
-            stepSizeCollection[k] if (k < maxIterations - 1 and stepSizeCollection[k+1] < 0) else None
+        print("Updating the state-input trajectory (in closed-loop version)")
+        uuCollection[:,:,k+1], xxCollection[:,:,k+1] = updateInputStateTrajectory(
+            xx0, uuCollection[:,:,k], xxCollection[:,:,k], stepsize, deltau, KK, sigma, TT, ni, ns, discretizedDynamicFuntion
         )
-        if stepSizeCollection[k] < 0:
-            if k > 0:
-                print("Rolling-back to the previous iteration and choosing a smaller stepsize (smaller w.r.t {})".format(stepSizeCollection[k-1]))
-                k -= 1
-                continue
-            else:
-                print("WARNING: already in the first iteration of the N.M., it was not possible to determine a step size using the Armijo method!")
-                break
 
-        # State-input trajectory update (in closed-loop version)
-        xxCollection[:,0,k+1] = xx0;
-        for tt in range(TT-1):
-            uuCollection[:,tt,k+1] = uuCollection[:,tt,k] + stepSizeCollection[k]*deltau[:,tt]
-            #uuCollection[:,tt,k+1] = uuCollection[:,tt,k] + KK[:,:,tt]@(xxCollection[:,tt,k+1] - xxCollection[:,tt,k]) + stepsize*sigma[:,tt]
-            xxCollection[:,tt+1,k+1] = discretizedDynamicFuntion(xxCollection[:,tt,k+1], uuCollection[:,tt,k+1])[0]
-        uuCollection[:,TT-1,k+1] = uuCollection[:,TT-1,k] + stepSizeCollection[k]*deltau[:,TT-1]
-
-        k += 1
+        k += 1 # Increment the iteration index
 
     if k >= maxIterations-1:
         print("WARNING: the N.M. was not able to converge (not converging in ", maxIterations, " iterations)!")
@@ -109,6 +134,7 @@ def solveCostateEquationTrkTrj(xx, uu, xx_des, uu_des, discretizedDynamicFuntion
     Notice that in this method are computed (and returned in the following order):
     - the costate trajectory that is the solution of the costate equation (lmbda)
     - the Jacobians of the dynamic wrt x and wrt u at xx,uu at each time step (respectively AA and BB)
+    - the transposed Hessians of the dynamic wrt x and wrt u at xx,uu at each time step (QQext as d2fdxdx, SSext as d2fdxdu, RRext as d2fdudu)
     - the Jacobians of the stage cost wrt x and wrt u at xx,uu at each time step (respectively qq and rr)
     - the Jacobian of the terminal cost wrt x at the terminal state value (alias qqT)
     - the transposed Hessians of the stage cost wrt x and wrt u at xx,uu at each time step (QQtilde as d2lldxdx, SStilde as d2lldxdu, RRtilde as d2lldudu)
@@ -124,6 +150,9 @@ def solveCostateEquationTrkTrj(xx, uu, xx_des, uu_des, discretizedDynamicFuntion
     QQtilde = zeros((xx.shape[0], xx.shape[0], TT))
     SStilde = zeros((uu.shape[0], xx.shape[0], TT))
     RRtilde = zeros((uu.shape[0], uu.shape[0], TT))
+    QQext = zeros((xx.shape[0], xx.shape[0], xx.shape[0], TT))
+    SSext = zeros((xx.shape[0], uu.shape[0], xx.shape[0], TT))
+    RRext = zeros((xx.shape[0], uu.shape[0], uu.shape[0], TT))
     grdJdu = zeros_like(uu)
     ll = 0
     for tt in reversed(range(TT-1)):
@@ -133,10 +162,10 @@ def solveCostateEquationTrkTrj(xx, uu, xx_des, uu_des, discretizedDynamicFuntion
         ll += llTemp
         qq[:,tt] = squeeze(qqTemp)
         rr[:,tt] = squeeze(rrTemp)
-        QQtilde[:,:,tt] = QQtildeTransposed.T
+        QQtilde[:,:,tt] = QQtildeTransposed # Already transposed (in a sense) cause the Hessian is symmetric; QQtilde[:,:,tt] = QQtildeTransposed.T
         SStilde[:,:,tt] = SStildeTransposed.T
-        RRtilde[:,:,tt] = RRtildeTransposed.T
-        AA[:,:,tt], BB[:,:,tt] = discretizedDynamicFuntion(xx[:,tt], uu[:,tt])[1:3]
+        RRtilde[:,:,tt] = RRtildeTransposed # Already transposed (in a sense) cause the Hessian is symmetric; RRtilde[:,:,tt] = RRtildeTransposed.T
+        AA[:,:,tt], BB[:,:,tt], QQext[:,:,:,tt], _, SSext[:,:,:,tt], RRext[:,:,:,tt] = discretizedDynamicFuntion(xx[:,tt], uu[:,tt])[1:]
         if tt == TT-2:
             # First iteration, definition of the terminal cost matrix as solution of the ARE for the last available instant of time (if required)
             if QQT is None or (all((x == 0 or x == None) for x in QQT.flatten())):
@@ -146,7 +175,8 @@ def solveCostateEquationTrkTrj(xx, uu, xx_des, uu_des, discretizedDynamicFuntion
             lmbda[:,TT-1] = squeeze(qqT)
         lmbda[:,tt] = qq[:,tt] + AA[:,:,tt].T@lmbda[:,tt+1]
         grdJdu[:,tt] = rr[:,tt] + BB[:,:,tt].T@lmbda[:,tt+1]
-    return lmbda, AA, BB, qq, rr, qqT, QQtilde, SStilde, RRtilde, QQT, grdJdu, ll
+
+    return lmbda, AA, BB, QQext, SSext, RRext, qq, rr, qqT, QQtilde, SStilde, RRtilde, QQT, grdJdu, ll
 
 
 def solveAffineLQP(AA, BB, QQ, RR, SS, QQT, TT, xx0, qq, rr, qqT):
@@ -264,10 +294,10 @@ def solveLinearLQP(AA, BB, QQ, RR, QQT, TT, xx0):
     return KK, PP, xxout, uuout
 
 
-def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction, stepsizeInitialGuess=None):
+def armijoStepSize(uu, xx, xx_des, uu_des, xx0, ll, deltau, grdJdu, KK, sigma, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction, stepsizeInitialGuess=None):
     """ Armijo's Rule for Step Size Selection """
 
-    armijoMaximumIterations = 14 # sufficient to attempt a stepsize of 0.01
+    armijoMaximumIterations = 10 # sufficient to attempt a stepsize of 0.04
     armijoBeta = 0.7
     armijoC = 0.5
     ns = xx_des.shape[0]
@@ -276,21 +306,17 @@ def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedD
     armijoCosts = []
 
     armijoLinePendence = dot(squeeze(deltau), squeeze(grdJdu))
-    print("Armijo line pendence {:.5f}: ({:.1f}° between deltau and grdJu)".format(
-        armijoLinePendence, rad2deg(arccos(armijoLinePendence/linalg.norm(deltau)/linalg.norm(grdJdu)))
-    ))
-    stepsize = float(1 if (stepsizeInitialGuess is None) else stepsizeInitialGuess*armijoBeta*armijoBeta)
-    print("Using as initial guess for the Armijo stepsize: {:.10}".format(stepsize))
+    print(" | Armijo line pendence: {:.16f} (alias dot-product between gradJ(u) and deltau)".format(armijoLinePendence))
+    stepsizeInitialGuess = float(1 if (stepsizeInitialGuess is None) else stepsizeInitialGuess)
+    stepsize = stepsizeInitialGuess
+    print(" | Using as initial guess for the Armijo stepsize: {:.10}".format(stepsize))
     for ii in range(armijoMaximumIterations):
 
-        tempxx = zeros((ns,TT))
-        tempuu = zeros((ni,TT))
-        tempxx[:,0] = xx0
-        for tt in range(TT-1):
-            tempuu[:,tt] = uu[:,tt] + stepsize*deltau[:,tt]
-            tempxx[:,tt+1] = discretizedDynamicFuntion(tempxx[:,tt], tempuu[:,tt])[0]
+        tempuu, tempxx = updateInputStateTrajectory(
+            xx0, uu, xx, stepsize, deltau, KK, sigma, TT, ni, ns, discretizedDynamicFuntion
+        )
         tempJJ = totalCostFunction(tempxx, tempuu, xx_des, uu_des, TT, stageCostFunction, terminalCostFunction)
-        print("New cost achieved by moving with stepsize {:.10}: ".format(stepsize), tempJJ)
+        print(" | New cost achieved by moving with stepsize {:.10}: ".format(stepsize), tempJJ)
 
         armijoStepsizes.append(stepsize)
         armijoCosts.append(tempJJ)
@@ -298,16 +324,21 @@ def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedD
         if tempJJ >= ll + armijoC*stepsize*armijoLinePendence:
             stepsize = armijoBeta*stepsize
         else:
-            print("Detected Armijo stepsize = {:.10} (in {} iterations)".format(stepsize, ii+1))
+            print(" | Detected Armijo stepsize = {:.10} (in {} iterations)".format(stepsize, ii+1))
             break
         if ii == armijoMaximumIterations-1:
-            print("WARNING: no stepsize was found applying the Armijo's Rule (not converging in {} iterations)(last stepsize attempted: {:.10})!".format(armijoMaximumIterations, stepsize))
-            stepsize = -1
+            print(" | WARNING: no stepsize was found applying the Armijo's Rule (not converging in {} iterations)(last stepsize attempted: {:.10})!".format(
+                armijoMaximumIterations, stepsize/armijoBeta
+            ))
+            stepsize = stepsizeInitialGuess
 
+    # Plot the Armijo's Rule stepsize selection behavior
     armijoStepsizes.append(0)
     armijoCosts.append(ll)
     armijoStepsizes = array(armijoStepsizes)
-    plt.figure(1); plt.clf()
+    plt.figure()
+    plt.clf()
+    plt.title("Armijo's Rule Step Size Selection Behavior")
     plt.plot(armijoStepsizes, armijoCosts, color='k', label='$J(\\mathbf{u}^k+stepsize*d^k)$')
     plt.plot(armijoStepsizes, ll + armijoLinePendence*armijoStepsizes, color='r', label='$J(\\mathbf{u}^k)+stepsize*\\nabla J(\\mathbf{u}^k)^{\\top} d^k$')
     plt.plot(armijoStepsizes, ll + armijoC*armijoLinePendence*armijoStepsizes, color='g', linestyle='dashed', label='$J(\\mathbf{u}^k)+stepsize*c*\\nabla J(\\mathbf{u}^k)^{\\top} d^k$')
@@ -315,11 +346,48 @@ def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedD
     plt.grid()
     plt.xlabel('stepsize')
     plt.legend()
-    plt.draw()
-    plt.show()
+    plt.show(block=False)
+    plt.pause(0.5)
 
     return stepsize
 
+def solveARE(A, B, Q, R, S):
+    # https://en.wikipedia.org/wiki/Linear%E2%80%93quadratic_regulator#Infinite-horizon,_discrete-time
+    augmented = (S is not None) and (not (all((x == 0 or x == None) for x in S.flatten())))
+    if augmented:
+        aA = A - B@linalg.pinv(R)@S.T
+        aQ = Q - S@linalg.pinv(R)@S.T
+        return dare(aA, B, aQ, R)[0]
+    else: return dare(A, B, Q, R)[0]
+
+def isAPositiveDefiniteMatrix(m):
+    if not allclose(m, m.T):
+        return False
+    try:
+        linalg.cholesky(matrix)
+        return True
+    except linalg.LinAlgError:
+        return False
+
+def updateInputStateTrajectory(xx0, uu_old, xx_old, stepsize, deltau, KK, sigma, TT, ni, ns, discretizedDynamicFuntion):
+
+    uu_new = zeros((ni, TT))
+    xx_new = zeros((ns, TT))
+    xx_new[:,0] = xx0
+    if xx_old is None or KK is None or sigma is None:
+        # Open-loop version
+        for tt in range(TT-1):
+            uu_new[:,tt] = uu_old[:,tt] + stepsize*deltau[:,tt]
+            xx_new[:,tt+1] = discretizedDynamicFuntion(xx_new[:,tt], uu_new[:,tt])[0]
+        uu_new[:,TT-1] = uu_old[:,TT-1] + stepsize*deltau[:,TT-1]
+        return uu_new, xx_new
+    else:
+        # Closed-loop version
+        for tt in range(TT-1):
+            uu_new[:,tt] = uu_old[:,tt] + KK[:,:,tt]@(xx_new[:,tt] - xx_old[:,tt]) + stepsize*sigma[:,tt]
+            xx_new[:,tt+1] = discretizedDynamicFuntion(xx_new[:,tt], uu_new[:,tt])[0]
+        uu_new[:,TT-1] = uu_old[:,TT-1] + KK[:,:,TT-1]@(xx_new[:,TT-1] - xx_old[:,TT-1]) + stepsize*sigma[:,TT-1]
+        return uu_new, xx_new
 
 def ComputeLocalLin(xx_star, uu_star, QQt, RRt, QQT, TT, Dynamics, solver_LQP): 
     ns = xx_star.shape[0]
@@ -336,15 +404,6 @@ def ComputeLocalLin(xx_star, uu_star, QQt, RRt, QQT, TT, Dynamics, solver_LQP):
     # Compute LQR gains
     KK = solver_LQP(AA_star, BB_star, QQt, RRt, QQT, TT)[0]
     return KK, AA_star, BB_star
-
-def solveARE(A, B, Q, R, S):
-    # https://en.wikipedia.org/wiki/Linear%E2%80%93quadratic_regulator#Infinite-horizon,_discrete-time
-    augmented = (S is not None) and (not (all((x == 0 or x == None) for x in S.flatten())))
-    if augmented:
-        aA = A - B@linalg.pinv(R)@S.T
-        aQ = Q - S@linalg.pinv(R)@S.T
-        return dare(aA, B, aQ, R)[0]
-    else: return dare(A, B, Q, R)[0]
 
 def GenerateNoise(xx, noise_std_percentage): 
     # Compute standard deviation for each state row-wise
