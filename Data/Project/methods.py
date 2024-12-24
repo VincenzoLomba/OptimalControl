@@ -1,6 +1,3 @@
-############################
-######### METHODS ##########
-############################
 
 from numpy import *
 from builtins import all
@@ -78,7 +75,7 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
 
         print("Computing the stepsize exploiting the Armijo's rule...")
         stepsize = armijoStepSize(
-            uuCollection[:,:,k], xx_des, uu_des, xx0, ll, deltau, descendentArmijoDirection[k], TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction
+            uuCollection[:,:,k], xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction
         )
 
         # State-input trajectory update (in closed-loop version)
@@ -254,11 +251,11 @@ def solveLinearLQP(AA, BB, QQ, RR, QQT, TT, xx0):
     return KK, PP, xxout, uuout
 
 
-def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, descendentArmijoDirection, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction):
+def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, grdJdu, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction):
     """ Armijo's Rule for Step Size Selection """
 
     stepsizeInitialGuess = 1
-    armijoMaximumIterations = 14
+    armijoMaximumIterations = 14 # sufficient to attempt a stepsize of 0.01
     armijoBeta = 0.7
     armijoC = 0.5
     ns = xx_des.shape[0]
@@ -266,15 +263,15 @@ def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, descendentArmijoDirectio
     armijoStepsizes = []
     armijoCosts = []
 
-    # armijoLinePendence = dot(squeeze(deltau), squeeze(grdJdu))
-    armijoLinePendence = squeeze(deltau@grdJdu.T)
-    print("Armijo line pendence {:.5f}: ({:.1f}°)".format(armijoLinePendence, rad2deg(arccos(armijoLinePendence/linalg.norm(deltau)/linalg.norm(grdJdu)))))
+    armijoLinePendence = dot(squeeze(deltau), squeeze(grdJdu))
+    print("Armijo line pendence {:.5f}: ({:.1f}° between deltau and grdJu)".format(
+        armijoLinePendence, rad2deg(arccos(armijoLinePendence/linalg.norm(deltau)/linalg.norm(grdJdu)))
+    ))
     stepsize = float(stepsizeInitialGuess)
     for ii in range(armijoMaximumIterations):
 
         tempxx = zeros((ns,TT))
         tempuu = zeros((ni,TT))
-        
         tempxx[:,0] = xx0
         for tt in range(TT-1):
             tempuu[:,tt] = uu[:,tt] + stepsize*deltau[:,tt]
@@ -300,7 +297,7 @@ def armijoStepSize(uu, xx_des, uu_des, xx0, ll, deltau, descendentArmijoDirectio
     plt.plot(armijoStepsizes, armijoCosts, color='k', label='$J(\\mathbf{u}^k+stepsize*d^k)$')
     plt.plot(armijoStepsizes, ll + armijoLinePendence*armijoStepsizes, color='r', label='$J(\\mathbf{u}^k)+stepsize*\\nabla J(\\mathbf{u}^k)^{\\top} d^k$')
     plt.plot(armijoStepsizes, ll + armijoC*armijoLinePendence*armijoStepsizes, color='g', linestyle='dashed', label='$J(\\mathbf{u}^k)+stepsize*c*\\nabla J(\\mathbf{u}^k)^{\\top} d^k$')
-    plt.scatter(armijoStepsizes, armijoCosts, marker='*') # plot the tested stepsize
+    plt.scatter(armijoStepsizes, armijoCosts, marker='*')
     plt.grid()
     plt.xlabel('stepsize')
     plt.legend()
