@@ -424,19 +424,20 @@ def GenerateNoise(xx, noise_std_percentage):
     return noise
 
 
-def SolveLQPwithNoise(xx_star, uu_star, KK, noise, TT, dynamics): 
+def SolveLQPwithNoise(xx_star, uu_star, KK, noise, TT, dynamics, xx0_noise): 
     ns = xx_star.shape[0]
     ni = uu_star.shape[0]
     xx_track = zeros((ns, TT))
     uu_track = zeros((ni, TT))
     xx_track[:,0] = xx_star[:,0] # Initializing the tracking trajectory as the optimal one
     
-    for i in range(ns):
-        xx_track[i,0] += noise[i] # Adding the noise on the tracking trajectory initial state
+    if(xx0_noise): 
+        for i in range(ns):
+            xx_track[i,:] += noise[i] # Adding the noise on the tracking trajectory to consider perturbed initial condition
 
-        for tt in range(TT): 
-            uu_track[:,tt] = uu_star[:, tt] + KK[:,:,tt]@(xx_track[:,tt] - xx_star[:,tt]) # Computing the controller using LQR gain in a closed loop fashion
-            xx_track[:,tt+1] = dynamics(xx_track[:,tt], uu_track[:,tt])
+    for tt in range(TT): 
+        uu_track[:,tt] = uu_star[:, tt] + KK[:,:,tt]@(xx_track[:,tt] - xx_star[:,tt]) # Computing the controller using LQR gain in a closed loop fashion
+        xx_track[:,tt+1] = dynamics(xx_track[:,tt], uu_track[:,tt])
 
     return xx_track, uu_track
 
