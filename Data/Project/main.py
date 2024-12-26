@@ -63,7 +63,8 @@ if(task[3]):
 
     # Design of the LQR with noise
     noise = GenerateNoise(xx_opt, noise_std_percentage=0.2)
-    xx_track, uu_track = SolveLQPwithNoise(xx_opt, uu_opt, KK, noise, TT, discretizedDynamicFunction)
+    xx_track, uu_track = SolveLQPwithNoise(xx_opt, uu_opt, KK, noise, TT, discretizedDynamicFunction, False)
+    xx_track, uu_track = SolveLQPwithNoise(xx_opt, uu_opt, KK, noise, TT, discretizedDynamicFunction, True)
 
 
 ############################
