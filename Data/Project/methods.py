@@ -439,3 +439,52 @@ def SolveLQPwithNoise(xx_star, uu_star, KK, noise, TT, dynamics):
             xx_track[:,tt+1] = dynamics(xx_track[:,tt], uu_track[:,tt])
 
     return xx_track, uu_track
+
+def plots(tx, tu, xx_des, xx_opt, uu_des, uu_opt):
+    """
+    Generates 4 subplots for desired and optimal trajectories
+    and a separate plot for desired and optimal input trajectories.
+
+    Parameters:
+    - tx: Time array for the state trajectories
+    - tu: Time array for the inpu trajectory
+    - xx_des: Array of desired trajectories (ns x len(tx))
+    - xx_opt: Array of optimal trajectories (ns x len(tx))
+    - uu_des: Array of desired input (len(tx))
+    - uu_opt: Array of optimal input (len(tx))
+    """
+    ns = xx_des.shape[0]  # Number of trajectories
+    colormap = cm.get_cmap('tab10', ns)
+
+    # Create 4 subplots for desired and optimal trajectories
+    fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+    axes = axes.flatten()  # Flatten the 2x2 grid for easier indexing
+
+    for i in range(ns):
+        ax = axes[i]  # Select the current subplot
+        color = colormap(i)
+        ax.plot(tx, xx_des[i, :], color=color, label=f'ϑ{i+1} desired')
+        ax.plot(tx, xx_opt[i, :], '--', color=color, label=f'ϑ{i+1} optimal')
+
+        ax.set_title(f'Theta {i}')  # Set subplot title
+        ax.legend()  # Add legend
+        ax.set_xlabel('Time')  # X-axis label
+        ax.set_ylabel('Value')  # Y-axis label
+
+    plt.tight_layout()  # Optimize layout to avoid overlap
+    plt.show()  # Display the figure
+
+    # Create a separate plot for desired and optimal input trajectories
+    plt.figure(figsize=(8, 6))
+
+    line_input_des, = plt.plot(tu, uu_des, label='Desired input')
+    color = line_input_des.get_color()  # Get color of the desired input line
+    plt.plot(tu, uu_opt[0, :], '--', color=color, label='Optimal input')
+
+    plt.title('Input Trajectory')  # Set title for input trajectory plot
+    plt.xlabel('Time')  # X-axis label
+    plt.ylabel('Value')  # Y-axis label
+    plt.legend()  # Add legend
+    plt.grid(True)  # Add grid for better visualization
+
+    plt.show()  # Display the figure
