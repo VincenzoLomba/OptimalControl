@@ -1,6 +1,9 @@
 # Flexible Robotic Arm Task1: from a desired smooth trajectory (that evolves from one equilibrium to another)
 #                             obtain an optimal one thanks to the regularized Newton [like] Method (in its closed-loop version)
 
+import os, sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import parameters as params
 from trajectories import pascalSnailFRAPositionTrajectory
 from numpy import diag, zeros, eye, array, squeeze, ones

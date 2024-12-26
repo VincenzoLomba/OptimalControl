@@ -5,9 +5,9 @@ from parameters import *
 from numpy import *
 from trajectories import *
 from methods import *
-from tasks.task1 import task1
-from tasks.task2 import task2
-from tasks.task3 import task3
+from task1 import task1
+from task2 import task2
+from task3 import task3
 
 # Tasks selection
 tasks = [0, 1, 0, 0]
