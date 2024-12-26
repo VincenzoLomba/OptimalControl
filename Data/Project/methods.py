@@ -5,6 +5,8 @@ from control import dare
 from dynamics import runDynamicFunction
 from costs import totalCostFunction, stageCostTrkTrj, termCostTrkTrj
 from matplotlib import pyplot as plt
+from datetime import datetime
+from miscellaneous import getTimeDifferenceAsString
 
 def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDynamicFuntion, tolerance, QQ, RR, givenQQT=None, givenFixedStepsize=None):
     """
@@ -35,6 +37,8 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
     - uu: column vector input (feasible) trajectory obtained through the optimization (coupled with xx; returning a state-input trajectory)
     """
 
+    startingTime = datetime.now()
+    
     # Compute ni and ns and be sure that the desired curves are in the right shape
     ni = min(uu_des.shape)
     ns = min(xx_des.shape)
@@ -59,7 +63,7 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
     k = 0
     while k < maxIterations:
 
-        print("\n[E] N.M. now approaching iteration ", format(k+1))
+        print("\n[>] N.M. now approaching iteration ", format(k+1))
 
         print("Solving the costate equation (and computing all involved quantities)...")
         lmbda, AA, BB, QQext, SSext, RRext, qq, rr, qqT, QQtilde, SStilde, RRtilde, QQT, grdJdu, ll = solveCostateEquationTrkTrj(
@@ -110,7 +114,7 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
         print("Input varation norm given by the N.M. (||deltau||): {:.12f}".format(linalg.norm(deltau)))
 
         if descentDirectionNorm < tolerance:
-            print("The N.M. successfully converged in ", k+1, " iterations!")
+            print("The N.M. successfully converged in", k+1, "iterations (required time: {})!".format(getTimeDifferenceAsString(datetime.now(), startingTime)))
             break
         
         if givenFixedStepsize is None:
@@ -129,10 +133,13 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
             xx0, uuCollection[:,:,k], xxCollection[:,:,k], stepsize, deltau, KK, sigma, TT, ni, ns, discretizedDynamicFuntion
         )
 
-        k += 1 # Increment the iteration index
+        k += 1 # Incrementing the iteration index
 
-    if k >= maxIterations-1:
-        print("WARNING: the N.M. was not able to converge (not converging in ", maxIterations, " iterations)!")
+        if k >= maxIterations-1:
+            print("WARNING: the N.M. was not able to converge (not converging in ", maxIterations, " iterations) ({})!".format(
+                getTimeDifferenceAsString(datetime.now(), startingTime)
+            ))
+            break
     return xxCollection[:,:,k], uuCollection[:,:,k]
 
 def solveCostateEquationTrkTrj(xx, uu, xx_des, uu_des, discretizedDynamicFuntion, stageCostFunction, TT, QQT=None):

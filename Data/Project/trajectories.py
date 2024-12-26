@@ -1,5 +1,6 @@
 
-from numpy import exp, linspace, zeros, ones, squeeze
+from numpy import *
+import parameters as params
 
 def sigmoidTrajectory(totalDeltaT, evolutionDeltaT, YstartingValue, YendingValue, dt):
     """
@@ -39,14 +40,12 @@ def sigmoidTrajectory(totalDeltaT, evolutionDeltaT, YstartingValue, YendingValue
         Y[ii, :] = Y[ii, :]*(YendingValue[ii]-YstartingValue[ii]) + YstartingValue[ii]
     return  squeeze(Y), squeeze(linspace(0, totalDeltaT, int(totalDeltaT/dt)))
 
-def PascalSnail(totalDeltaT, evolutionDeltaT, dt, a = 0.5, b = 1):
+def pascalSnailFRAPositionTrajectory(totalDeltaT, evolutionDeltaT, dt):
     """
-    Generation of a complex smooth trajectory between two constant points
+    Generation of a complex smooth pascal-snail-like trajectory for the Flexible Robotic Arm (starting from and ending to an equilibrium point)
     Arguments:
     - totalDeltaT: scalar total time of the trajectory evolution
     - evolutionDeltaT: scalar time of the trajectory evolution in which the evolution itself is not constant (maximum: 20, minimum 2)
-    - YstartingValue: starting value assumed from the trajectory
-    - YendingValue: ending value assumed from the trajectory
     - dt: scalar time step of the trajectory evolution
     Returns:
     - Y: the desired smooth trajectory
@@ -58,36 +57,58 @@ def PascalSnail(totalDeltaT, evolutionDeltaT, dt, a = 0.5, b = 1):
     if totalDeltaT < evolutionDeltaT:
         totalDeltaT = evolutionDeltaT
     
-    dim = int(totalDeltaT/dt)
-    dim_snail = int(evolutionDeltaT/dt)
+    TT = int(totalDeltaT/dt)
+    # TTSnail = int(evolutionDeltaT/dt)
+    t = linspace(0, totalDeltaT, TT)
+    tSnail = linspace(-evolutionDeltaT/2, evolutionDeltaT/2, int(evolutionDeltaT/dt))
+    snailBegin = int(((totalDeltaT-evolutionDeltaT)/dt/2))
+    snailEnd = int(((totalDeltaT-evolutionDeltaT)/dt/2))+len(tSnail)
+    theta = linspace(0, 2*pi, int(evolutionDeltaT/dt)) # Definition of polar independent coordinate theta in the range [0, 2pi]
     
-    t = linspace(0,totalDeltaT, dim)
-    t_snail = linspace(-evolutionDeltaT/2, evolutionDeltaT/2, int(evolutionDeltaT/dt))
-
-    initialPartEnd = int(((totalDeltaT-evolutionDeltaT)/dt/2))
-    snailPartEnd = int(((totalDeltaT-evolutionDeltaT)/dt/2))+len(t_snail)
-
-    theta = linspace(0, 2*pi, int(evolutionDeltaT/dt)) # definition of polar independent coordinate theta
-    
-    # We define the Pascal snail
+    # Pascal snail definition
+    a = 0.4
+    b = 0.8
     r = a + b*sin(theta)
 
-    # We define the change of variable to polar coordinates
+    # Change of variable to polar coordinates definition
     x = r*cos(theta)
     y = r*sin(theta)
+    x = x[::-1]
+    y = y[::-1]
+    # Rescaling of the Pascal snail in order to make it fully reachable by the two links in their maximum extension
+    y = y*0.4
 
-    Ysnail = zeros((2, dim)) # Trajectory initialization
-    Y = vstack((x,y)) # Pascal snail 
+     # Reorganization of the Pascal snail point in order to make it start from a position in which the second link is vertical (alias equilibrium position)
+    maximumXIndex = argmax(x)
+    maximumXValue = x[maximumXIndex]
+    link1StartingAngle = 45/180*pi
+    if (maximumXValue > params.r1*sin(link1StartingAngle)): raise ValueError(
+        "The Snail Pascal curve is too large for the first link to be properly placed"
+    )
+    YvalueForMaximumX = y[maximumXIndex]
+    snailYoriginDistance = YvalueForMaximumX + params.r2 + sqrt(params.r1**2 - maximumXValue**2)
+    # snailXoriginDistance = 0
+    x = concatenate((x[maximumXIndex:],x[:maximumXIndex]))
+    y = concatenate((y[maximumXIndex:], y[:maximumXIndex]))
 
-    print(Ysnail.shape)
-    initialValue = Y[:,0]
-    finalValue = Y[:,dim_snail-1]
+    # Computing FRA angles evolution
+    distanceFromAbsoluteOrigin = sqrt(x**2 + (snailYoriginDistance-y)**2)
+    if max(distanceFromAbsoluteOrigin) > params.r1 + params.r2: raise ValueError(
+        "The Snail Pascal curve is too large for the two link to be able to fully reach it"
+    )
+    angleFromTheVerticalOfEndEffector = atan2(x, snailYoriginDistance-y)
+    x1Reduced = arccos((params.r1**2 + distanceFromAbsoluteOrigin**2 - params.r2**2) / (2*params.r1*distanceFromAbsoluteOrigin))
+    x1 = angleFromTheVerticalOfEndEffector + x1Reduced
+    x2 = - (pi - arccos((params.r1**2 + params.r2**2 - distanceFromAbsoluteOrigin**2) / (2*params.r1*params.r2)))
 
-    # Definition of initial part with constant initial snail curve value 
-    Ysnail[:,0:initialPartEnd] = initialValue[:, newaxis]
-    # Definition of transient part: the effective Pascal snail
-    Ysnail[:,initialPartEnd:snailPartEnd] = Y
-    # Definition of final part with constant final snail curve value
-    Ysnail[:,snailPartEnd:] = finalValue[:, newaxis]
+    # Definition of additional initial and final part with constant initial value
+    x1Extended = zeros(TT)
+    x2Extended = zeros(TT)
+    x1Extended[:snailBegin] = x1[0]
+    x2Extended[:snailBegin] = x2[0]
+    x1Extended[snailEnd:] = x1[-1]
+    x2Extended[snailEnd:] = x2[-1]
+    x1Extended[snailBegin:snailEnd] = x1
+    x2Extended[snailBegin:snailEnd] = x2
 
-    return squeeze(Ysnail), squeeze(t)
+    return squeeze(x1Extended), squeeze(x2Extended), squeeze(t)

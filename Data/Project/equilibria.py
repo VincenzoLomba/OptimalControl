@@ -1,11 +1,10 @@
-# Bologna,  28/11/2024
-# Flexible Robotic Arm Equilibrium Points
+# Flexible Robotic Arm Equilibrium Points searcher
 
 from numpy import *
-from dynamics import discretizedDynamicFRA as f
+from dynamics import discretizedDynamicFRA as f, dynamicG, dynamicC
 from parameters import *
 
-def getAnEquilibriumPoint(uu, xx0):
+def getAnFRAEquilibriumPoint(uu, xx0):
     """
     Equilibrium points of the Flexible Robotic Arm for input uu.
     These points are computed using the Newton Method for zero root finding applied on the function
@@ -27,8 +26,8 @@ def getAnEquilibriumPoint(uu, xx0):
     stepsize = e-2
     tolerance = 1e-10
     xx = zeros((ns, maximumIteration))
-    xx[:,0] = xx0;
-    solved = False;
+    xx[:,0] = xx0
+    solved = False
 
     for i in range(maximumIteration-1):
         
@@ -46,7 +45,37 @@ def getAnEquilibriumPoint(uu, xx0):
     if not solved:
         raise TimeoutError("No equilibrium point found in " + str(maximumIteration) + " maximum number of iterations")
     
-    return xx[:,i+1];
+    return xx[:,i+1]
+
+def searchFRAInputGivenEquilibria(eqxx):
+    """
+    Search the input value that generates the equilibrium point of the FRA characterized by x0=eqxx, x1=-eqxx and x2,x3 equal zero.
+    Arguments:
+    - eqxx: scalar equilibrium value for x0 (alias -x1)
+    Returns:
+    - uu: scalar input value that generates the equilibrium point
+    """
+    uu = 0
+    eqxx = array([eqxx, -eqxx, 0, 0])
+    fToNullify = lambda uu: (dynamicC(eqxx) + dynamicG(eqxx) - array([uu, 0]))[0]
+    maximumIteration = int(5e4)
+    stepsize = e-2
+    tolerance = 1e-10
+    uu = zeros((ni, maximumIteration))
+    uu[:,0] = 0
+    solved = False
+
+    for i in range(maximumIteration-1):
+        
+        uu[:,i+1] = uu[:,i] + stepsize*fToNullify(squeeze(uu[:,i]))
+        print(uu[:,i+1])
+        if (abs(uu[:,i+1]-uu[:,i]) < tolerance).all(): # if linalg.norm(direction) < tolerance:
+            solved = True
+            break
+    if not solved:
+        raise TimeoutError("No suitable input value found in " + str(maximumIteration) + " maximum number of iterations")
+    
+    return uu[:,i+1]
 
 if __name__ == "__main__":
     
@@ -54,25 +83,25 @@ if __name__ == "__main__":
     print("\nEquilibrium points FRA (for a null input):")
     ϑ1_initial = pi - pi/180*20
     ϑ2_initial = 0
-    print(getAnEquilibriumPoint(
+    print(getAnFRAEquilibriumPoint(
         array([0]),
         array([ϑ1_initial, ϑ2_initial, 0, 0])
     ))
     ϑ1_initial = pi - pi/180*20
     ϑ2_initial = -pi/180*135
-    print(getAnEquilibriumPoint(
+    print(getAnFRAEquilibriumPoint(
         array([0]),
         array([ϑ1_initial, ϑ2_initial, 0, 0])
     ))
     ϑ1_initial = pi/180*20
     ϑ2_initial = pi - pi/180*20
-    print(getAnEquilibriumPoint(
+    print(getAnFRAEquilibriumPoint(
         array([0]),
         array([ϑ1_initial, ϑ2_initial, 0, 0])
     ))
     ϑ1_initial = pi/180*20
     ϑ2_initial = pi/180*20
-    print(getAnEquilibriumPoint(
+    print(getAnFRAEquilibriumPoint(
         array([0]),
         array([ϑ1_initial, ϑ2_initial, 0, 0])
     ))

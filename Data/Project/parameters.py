@@ -16,10 +16,9 @@ g = 9.81    # gravity
 f1 = 0.1    # friction associated to the pivot of the first link
 f2 = 0.1    # friction associated to the pivot of the second link
 
-dtCollection = SimpleNamespace(
-    task0_discretizationStep = 1e-3 # The discretization step used in the FRA discretized dynamic (in seconds)
-)
+discretizationStep = 1e-3 # The discretization step (used for example in the FRA discretized dynamic), in seconds
 
 TCollection = SimpleNamespace(
-    task1_trajectoryDuration = 10 # The duration of the trajectory (in seconds)
+    task1_trajectoryDuration = 10, # The duration of the trajectory (in seconds)
+    task2_trajectoryDuration = 10 # The duration of the trajectory (in seconds)
 )

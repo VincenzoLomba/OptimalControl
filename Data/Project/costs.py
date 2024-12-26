@@ -1,4 +1,4 @@
-# Definition of the cost function for [the Flexible Robotic Arm] a trajectory tracking optimization problem
+# Definition of the cost functions for [the Flexible Robotic Arm] a trajectory tracking optimization problem
 
 from parameters import *
 from numpy import squeeze, zeros

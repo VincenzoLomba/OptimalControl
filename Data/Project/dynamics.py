@@ -3,7 +3,7 @@
 from numpy import *
 from parameters import *
 
-dt = dtCollection.task0_discretizationStep # definition of the discretization step
+dt = discretizationStep # definition of the discretization step (loading from parameters)
 
 def discretizedDynamicFRA(xx,uu):
     """
@@ -16,9 +16,9 @@ def discretizedDynamicFRA(xx,uu):
     - dfdx: 4x4 jacobian of the dynamics wrt x at xx,uu
     - dfdu: 4x1 jacobian of the dynamics wrt u at xx,uu
     - d2fdxdx: 4x4x4 hessian of the dynamics wrt x two times at xx,uu
-    - d2fdxdu: 4x4 hessian of the dynamics one time wrt x and one time wrt u at xx,uu
+    - d2fdxdu: 4x4x1 hessian of the dynamics one time wrt x and one time wrt u at xx,uu
     - d2fdudx: 4x1x4 hessian of the dynamics one time wrt u and one time wrt x at xx,uu
-    - d2fdudu: 4x1 hessian of the dynamics wrt u two times at xx,uu
+    - d2fdudu: 4x1x1 hessian of the dynamics wrt u two times at xx,uu
     """
     xx = xx.squeeze()
     uu = uu.squeeze()
@@ -29,15 +29,9 @@ def discretizedDynamicFRA(xx,uu):
         [I2+m2*(r2)**2+m2*l1*r2*cos(xx[1]),                             I2+m2*(r2)**2                     ]
     ])
     # Coriolis and centrifugal forces matrix (2x1)
-    C = array([
-        -m2*l1*r2*xx[3]*sin(xx[1])*(xx[3]+2*xx[2]),
-        m2*l1*r2*sin(xx[1])*(xx[2])**2
-    ])
+    C = dynamicC(xx)
     # Gravity forces matrix (2x1)
-    G = array([
-        g*(m1*r1+m2*l1)*sin(xx[0])+g*m2*r2*sin(xx[0]+xx[1]), 
-        g*m2*r2*sin(xx[0]+xx[1])
-    ])
+    G = dynamicG(xx)
     # Friction forces matrix (2x2)
     F = array([
         [f1, 0], 
@@ -63,7 +57,7 @@ def discretizedDynamicFRA(xx,uu):
         [-m2*l1*r2*cos(xx[1]),      0                    ]
     ])
     # Tensor second order derivative wrt the state vector of the intertia matrix (2x2x4)
-    dMdx = [zeros((2,2)), d2Mdx1x1, zeros((2,2)), zeros((2,2))]
+    d2Mdxdx = [zeros((2,2)), d2Mdx1x1, zeros((2,2)), zeros((2,2))]
     # Second order derivative wrt the second state x1 teo times of the inverse of the inertia matrix (2x2)
     d2invMdx1x1 = -invM*d2Mdx1x1*invM+2*invM*dMdx1*invM*dMdx1*invM
 
@@ -238,3 +232,17 @@ def runDynamicFunction(discretizedDynamicFuntion, uu, xx0, TT):
     for tt in range(TT-1):
         xx[:,tt+1] = discretizedDynamicFuntion(xx[:,tt], uu[:,tt])[0] # (notice: this is an assignment between shaped (ns,) python objects)
     return xx
+
+def dynamicC(xx):
+    """ Given the state vector xx, this function returns the Coriolis and centrifugal forces matrix (2x1) """
+    return array([
+        -m2*l1*r2*xx[3]*sin(xx[1])*(xx[3]+2*xx[2]),
+        m2*l1*r2*sin(xx[1])*(xx[2])**2
+    ])
+
+def dynamicG(xx):
+    """ Given the state vector xx, this function returns the gravity forces matrix (2x1) """
+    return array([
+        g*(m1*r1+m2*l1)*sin(xx[0])+g*m2*r2*sin(xx[0]+xx[1]), 
+        g*m2*r2*sin(xx[0]+xx[1])
+    ])
