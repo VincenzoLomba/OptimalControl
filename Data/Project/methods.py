@@ -432,7 +432,7 @@ def SolveLQPwithNoise(xx_star, uu_star, KK, noise, TT, dynamics):
     xx_track[:,0] = xx_star[:,0] # Initializing the tracking trajectory as the optimal one
     
     for i in range(ns):
-        xx_track[i,:] += noise[i] # Adding the noise on the initial state to consider perturbed initial condition
+        xx_track[i,0] += noise[i] # Adding the noise on the tracking trajectory initial state
 
         for tt in range(TT): 
             uu_track[:,tt] = uu_star[:, tt] + KK[:,:,tt]@(xx_track[:,tt] - xx_star[:,tt]) # Computing the controller using LQR gain in a closed loop fashion
