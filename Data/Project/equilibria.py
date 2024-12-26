@@ -4,7 +4,7 @@ from numpy import *
 from dynamics import discretizedDynamicFRA as f, dynamicG, dynamicC
 from parameters import *
 
-def getAnFRAEquilibriumPoint(uu, xx0):
+def getAFRAEquilibriumPoint(uu, xx0):
     """
     Equilibrium points of the Flexible Robotic Arm for input uu.
     These points are computed using the Newton Method for zero root finding applied on the function
@@ -83,25 +83,25 @@ if __name__ == "__main__":
     print("\nEquilibrium points FRA (for a null input):")
     ϑ1_initial = pi - pi/180*20
     ϑ2_initial = 0
-    print(getAnFRAEquilibriumPoint(
+    print(getAFRAEquilibriumPoint(
         array([0]),
         array([ϑ1_initial, ϑ2_initial, 0, 0])
     ))
     ϑ1_initial = pi - pi/180*20
     ϑ2_initial = -pi/180*135
-    print(getAnFRAEquilibriumPoint(
+    print(getAFRAEquilibriumPoint(
         array([0]),
         array([ϑ1_initial, ϑ2_initial, 0, 0])
     ))
     ϑ1_initial = pi/180*20
     ϑ2_initial = pi - pi/180*20
-    print(getAnFRAEquilibriumPoint(
+    print(getAFRAEquilibriumPoint(
         array([0]),
         array([ϑ1_initial, ϑ2_initial, 0, 0])
     ))
     ϑ1_initial = pi/180*20
     ϑ2_initial = pi/180*20
-    print(getAnFRAEquilibriumPoint(
+    print(getAFRAEquilibriumPoint(
         array([0]),
         array([ϑ1_initial, ϑ2_initial, 0, 0])
     ))

@@ -1,7 +1,6 @@
 
 from methods import ComputeLocalLin, GenerateNoise, SolveLQPwithNoise
 
-
 def task3():
     # Computation of local linearization around optimal trajectory and consequently LQR gain KK
     KK = ComputeLocalLin(xx_opt, uu_opt, QQ, RR, QQ, TT, discretizedDynamicFunction, solveLinearLQP)[0]

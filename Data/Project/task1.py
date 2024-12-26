@@ -4,7 +4,7 @@
 
 import parameters as params
 from numpy import *
-from equilibria import getAnEquilibriumPoint
+from equilibria import getAFRAEquilibriumPoint
 from matplotlib import pyplot
 from trajectories import *
 from methods import runNewtonMethodTrkTrj
@@ -21,8 +21,8 @@ def task1():
 
     # Searching for two symmetric equilibrium points
     uu_equlibrium = 31.21523
-    xx_equilibrium1 = getAnEquilibriumPoint(array([uu_equlibrium]), array([0, 0, 0, 0]))
-    xx_equilibrium2 = getAnEquilibriumPoint(array([-uu_equlibrium]), array([0, 0, 0, 0]))
+    xx_equilibrium1 = getAFRAEquilibriumPoint(array([uu_equlibrium]), array([0, 0, 0, 0]))
+    xx_equilibrium2 = getAFRAEquilibriumPoint(array([-uu_equlibrium]), array([0, 0, 0, 0]))
 
     # Defining as desired input-state a sigmoid-junction between the two equilibrium points
     deltsSigmoid = T/4*3

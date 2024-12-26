@@ -47,7 +47,7 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
 
     # Definition the stage cost function at the generic istant of time t (time invariant cost matrixes QQ and RR are considered here)
     if (QQ.ndim < 3): QQ = repeat(QQ[:, :, newaxis], TT, axis=2)
-    if (RR.ndim < 3): RR = repeat(QQ[:, :, newaxis], TT, axis=2)
+    if (RR.ndim < 3): RR = repeat(RR[:, :, newaxis], TT, axis=2)
     def stageCostFunction(xx_t, uu_t, xx_des_t, uu_des_t, t):
         return stageCostTrkTrj(xx_t, uu_t, xx_des_t, uu_des_t, QQ[:,:,t], RR[:,:,t])
 

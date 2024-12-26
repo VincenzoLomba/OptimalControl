@@ -1,8 +1,6 @@
 # Flexible Robotic Arm Task1: from a desired smooth trajectory (that evolves from one equilibrium to another)
 #                             obtain an optimal one thanks to the regularized Newton [like] Method (in its closed-loop version)
 
-import os, sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import parameters as params
 from trajectories import pascalSnailFRAPositionTrajectory
@@ -42,11 +40,11 @@ def task2():
     #RR[:,:,TT-RRzeroSlice:TT] = 100*eye(ni)
     RR = 0.01*eye(ni)
     QQT = 10**6*eye(ns)
-    newtonMethodMaxIterations = 200
+    newtonMethodMaxIterations = 60
     xx_opt, uu_opt = runNewtonMethodTrkTrj(
         xx_des, uu_des, xx_des[:, 0], TT, newtonMethodMaxIterations,
         discretizedDynamicFuntion, 1e-4,
-        QQ, RR, QQT, 0.1
+        QQ, RR, QQT, None
     )
 
     # Plotting results
