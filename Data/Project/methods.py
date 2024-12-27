@@ -127,18 +127,20 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
             if stepsize > 0:
                 print("After exploiting the Armijo's rule, using as stepsize: {:.10}".format(stepsize))
             else:
-                print("Using now as direction the steepest descendent one and again computing the stepsize exploiting the Armijo's rule...")
-                direction = -grdJdu
-                stepsize = armijoStepSize(
-                    uuCollection[:,:,k], xxCollection[:,:,k],xx_des, uu_des, xx0, ll, direction, grdJdu, KK, sigma, TT, discretizedDynamicFuntion,
-                    stageCostFunction, terminalCostFunction, abs(stepsize)
-                )
-                if stepsize <= 0:
-                    stepsize = 1
-                    direction = deltau
-                    print("Stepsize search with the Armijo's rule still failing, using as stepsize (with the Newton Direction): {:.10}".format(stepsize))
-                else:
-                    print("After exploiting the Armijo's rule, using as stepsize: {:.10}".format(stepsize))
+                # print("Using now as direction the steepest descendent one and again computing the stepsize exploiting the Armijo's rule...")
+                # direction = -grdJdu
+                # stepsize = armijoStepSize(
+                #     uuCollection[:,:,k], xxCollection[:,:,k],xx_des, uu_des, xx0, ll, direction, grdJdu, KK, sigma, TT, discretizedDynamicFuntion,
+                #     stageCostFunction, terminalCostFunction, abs(stepsize)
+                # )
+                # if stepsize <= 0:
+                #     stepsize = float(1)
+                #     direction = deltau
+                #     print("Stepsize search with the Armijo's rule still failing, using as stepsize (with the Newton Direction): {:.10}".format(stepsize))
+                # else:
+                #     print("After exploiting the Armijo's rule, using as stepsize: {:.10}".format(stepsize))
+                givenFixedStepsize = float(1)
+                stepsize = givenFixedStepsize
         else:
             print("Using as stepsize the given fixed value: {:.10}".format(givenFixedStepsize))
             stepsize = givenFixedStepsize

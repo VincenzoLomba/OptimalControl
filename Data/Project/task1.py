@@ -39,9 +39,9 @@ def task1():
     QQT = 10**6*eye(ns)
     newtonMethodMaxIterations = 20
     xx_opt, uu_opt = runNewtonMethodTrkTrj(
-    xx_des, uu_des, xx_equilibrium1, TT, newtonMethodMaxIterations,
-    discretizedDynamicFuntion, 1e-4,
-    QQ, RR, QQT, None
+        xx_des, uu_des, xx_equilibrium1, TT, newtonMethodMaxIterations,
+        discretizedDynamicFuntion, 1e-4,
+        QQ, RR, QQT, None
     )
 
     # Plotting results
@@ -65,6 +65,8 @@ def task1():
     ax.plot(tu, uu_opt[0, :], '--', color=color_u, label='u optimal')
     ax.legend()
     pyplot.show();
+
+    return xx_opt, uu_opt
 
 if __name__ == "__main__":
     task1()

@@ -1,7 +1,9 @@
 # Flexible Robotic Arm Discretized Dynamics
 
-from numpy import *
 from parameters import *
+from numpy import *
+from sympy import symbols, Matrix, lambdify, hessian, diff, sin, cos
+from datetime import datetime
 
 dt = discretizationStep # definition of the discretization step (loading from parameters)
 
@@ -23,194 +25,93 @@ def discretizedDynamicFRA(xx,uu):
     xx = xx.squeeze()
     uu = uu.squeeze()
 
-    # Inertia matrix (2x2)
-    M = array([
-        [I1+I2+ m1*(r1)**2+m2*((l1)**2+(l2)**2)+2*m2*l1*r2*cos(xx[1]),  I2+m2*(r2)**2+m2*l1*r2*cos(xx[1]) ],
-        [I2+m2*(r2)**2+m2*l1*r2*cos(xx[1]),                             I2+m2*(r2)**2                     ]
+    # Simbols definition
+    theta1, theta2, dtheta1, dtheta2, u = symbols('theta1 theta2 dtheta1 dtheta2 u', real=True)
+    thetas = [theta1, theta2, dtheta1, dtheta2]
+
+    # Inertia matrix M(theta2) (2x2)
+    M = Matrix([
+        [I1+I2+ m1*(r1)**2+m2*((l1)**2+(r2)**2)+2*m2*l1*r2*cos(theta2),  I2+m2*(r2)**2+m2*l1*r2*cos(theta2) ],
+        [I2+m2*(r2)**2+m2*l1*r2*cos(theta2),                             I2+m2*(r2)**2                      ]
     ])
-    # Coriolis and centrifugal forces matrix (2x1)
-    C = dynamicC(xx)
-    # Gravity forces matrix (2x1)
-    G = dynamicG(xx)
+    # Coriolis and centrifugal forces matrix C(theta1, theta1, dtheta1, dtheta2) (2x1)
+    C = Matrix([
+            -m2*l1*r2*dtheta2*sin(theta2)*(dtheta2+2*dtheta1),
+            m2*l1*r2*sin(theta2)*(dtheta1)**2
+    ])
+    # Gravity forces matrix G(theta1, theta2) (2x1)
+    G = Matrix([  
+        g*(m1*r1+m2*l1)*sin(theta1)+g*m2*r2*sin(theta1+theta2), 
+        g*m2*r2*sin(theta1+theta2)
+    ])
     # Friction forces matrix (2x2)
-    F = array([
+    F = Matrix([
         [f1, 0], 
         [0, f2]
     ])
-    # Input matrix (2x1)
-    U = array([uu, 0])
-
-    # Derivative wrt the second state x1 of the inertia matrix (2x2)
-    dMdx1 = array([
-        [-2*m2*l1*r2*sin(xx[1]),    -m2*l1*r2*sin(xx[1]) ], 
-        [-m2*l1*r2*sin(xx[1]),      0                    ]
-    ])
-    # Tensor derivative wrt the state vector of the intertia matrix (2x2x4)
-    dMdx = [zeros((2,2)), dMdx1, zeros((2,2)), zeros((2,2))]
-    # Inverse of the inertia matrix (2x2)
-    invM = linalg.pinv(M)
-    # Derivative wrt the second state x1 of the inverse of the inertia matrix (2x2)
-    dinvMdx1 = -invM*dMdx1*invM
-    # Second order derivative wrt the second state x1 two times of the inertia matrix (2x2)
-    d2Mdx1x1 = array([
-        [-2*m2*l1*r2*cos(xx[1]),    -m2*l1*r2*cos(xx[1]) ], 
-        [-m2*l1*r2*cos(xx[1]),      0                    ]
-    ])
-    # Tensor second order derivative wrt the state vector of the intertia matrix (2x2x4)
-    d2Mdxdx = [zeros((2,2)), d2Mdx1x1, zeros((2,2)), zeros((2,2))]
-    # Second order derivative wrt the second state x1 teo times of the inverse of the inertia matrix (2x2)
-    d2invMdx1x1 = -invM*d2Mdx1x1*invM+2*invM*dMdx1*invM*dMdx1*invM
-
-    # Tensor derivative wrt the state vector of the Coriolis and centrifugal forces matrix (2x1x4)
-    dCdx0 = array([0, 0])
-    dCdx1 = array([
-        -m2*l1*r2*xx[3]*cos(xx[1])*(xx[3]+2*xx[2]),
-        m2*l1*r2*cos(xx[1])*(xx[2])**2
-    ])
-    dCdx2 = array([
-        -2*m2*l1*r2*xx[3]*sin(xx[1]), 
-        2*m2*l1*r2*sin(xx[1])*(xx[2])
-    ])
-    dCdx3 = array([
-        -m2*l1*r2*xx[3]*sin(xx[1])-m2*l1*r2*sin(xx[1])*(xx[3]+2*xx[2]),
-        0
-    ])
-    dCdx = array([dCdx0, dCdx1, dCdx2, dCdx3])
-
-    # Tensor derivative wrt the state vector of the gravity forces matrix (2x1x4)
-    dGdx0 = array([
-        g*(m1*r1+m2*l1)*cos(xx[0])+g*m2*r2*cos(xx[0]+xx[1]),
-        g*m2*r2*cos(xx[0]+xx[1])
-    ])
-    dGdx1 = array([
-        g*m2*r2*cos(xx[0]+xx[1]), 
-        g*m2*r2*cos(xx[0]+xx[1])
-    ])
-    dGdx2 = array([0, 0])
-    dGdx3 = array([0, 0])
-    dGdx = array([dGdx0, dGdx1, dGdx2, dGdx3])
-
-    # Tensor derivative wrt the state vector of the friction forces matrix (2x2x4)
-    # dFdx = [zeros((2,2)), zeros((2,2)), zeros((2,2)), zeros((2,2))]
+    # Control input vector (2x1)
+    U = Matrix([u, 0])
 
     # Definition of the 4x1 column vector state at time t+1 according to the discretized dynamics
     # Notice that this is the definition of the discretized dynamic function f=[f0, f1, f2, f3]'
-    xxp = zeros((ns, 1))
-    xxp[0] = xx[0] + dt*xx[2]
-    xxp[1] = xx[1] + dt*xx[3]
-    xxp[2:4] = (xx[2:4] + dt*invM@(U-G-F@array([xx[2], xx[3]])-C)).reshape(2,1)
+    xxp = Matrix([
+        theta1 + dt*dtheta1,
+        theta2 + dt*dtheta2,
+        Matrix([dtheta1, dtheta2]) + dt*M.inv()*(U-G-F*Matrix([dtheta1, dtheta2])-C)
+    ])
 
     # Jacobian of the dynamics wrt x at xx,uu (dfdx, 4x4) (notice f=[f0, f1, f2, f3]')
-    # Notice that the minor 2x2 extracted from dfdx at last two rows and first two columns if the Jacobian of [f2, f3]' wrt [x0, x1]'
-    # Notice that the minor 2x2 extracted from dfdx at last two rows and last two columns if the Jacobian of [f2, f3]' wrt [x2, x3]'
-    # Notice that [f2, f3]'=invM(x1)*(U-G(x0,x1)-F*[x2, x3]'-C(x0,x1,x2,x3))
-    dfdx = zeros((ns, ns))
-    dfdx[0, :] = [1, 0, dt, 0]
-    dfdx[1, :] = [0, 1, 0, dt]
-    dfdx[2:4, 0] = dt*(invM@(-dGdx[0]-dCdx[0]))
-    dfdx[2:4, 1] = dt*(invM@(-dGdx[1]-dCdx[1]) + dinvMdx1@(U-F@array([xx[2], xx[3]])-C-G))
-    dfdx[2:4, 2] = array([1, 0]) + dt*(invM@(-dGdx[2]-F@array([1, 0])-dCdx[2]))
-    dfdx[2:4, 3] = array([0, 1]) + dt*(invM@(-dGdx[3]-F@array([0, 1])-dCdx[3]))
+    dfdx = xxp.jacobian(thetas)
 
     # Jacobian of the dynamics wrt u at xx,uu (dfdu, 4x1) (notice f=[f0, f1, f2, f3]')
-    dfdu = zeros((ns, ni))
-    dfdu[2:4, 0] = dt*invM@array([1, 0])
+    dfdu = xxp.jacobian([u])
 
-    # We start defining all the Hessians' components:
-    d2Cdx0x0 = array([0, 0])
-    d2Gdx0x0 = array([
-        -g*(m1*r1+m2*l1)*sin(xx[0])-g*m2*r2*sin(xx[0]+xx[1]),
-        -g*m2*r2*sin(xx[0]+xx[1])
-    ])
-    d2Cdx0x1 = array([0, 0])
-    d2Gdx0x1 = array([
-        -g*m2*r2*sin(xx[0]+xx[1]),
-        -g*m2*r2*sin(xx[0]+xx[1])
-    ])
-    d2Cdx1x0 = array([0, 0])
-    d2Gdx1x0 = array([
-        -g*m2*r2*sin(xx[0]+xx[1]), 
-        -g*m2*r2*sin(xx[0]+xx[1])
-    ])
-    d2Cdx1x1 = array([
-        m2*l1*r2*xx[3]*sin(xx[1])*(xx[3]+2*xx[2]),
-        -m2*l1*r2*sin(xx[1])*(xx[2])**2
-    ])
-    d2Gdx1x1 = array([
-        -g*m2*r2*sin(xx[0]+xx[1]), 
-        -g*m2*r2*sin(xx[0]+xx[1])
-    ])
-    d2Cdx1x2 = array([
-        -2*m2*l1*r2*xx[3]*cos(xx[1]),
-        2*m2*l1*r2*cos(xx[1])*(xx[2])
-    ])
-    d2Gdx1x2 = array([0, 0])
-    d2Cdx1x3 = array([
-        -m2*l1*r2*cos(xx[1])*(xx[3]+2*xx[2])-m2*l1*r2*xx[3]*cos(xx[1]),
-        0
-    ])
-    d2Gdx1x3 = array([0, 0])
-    d2Cdx2x1 = array([
-        -2*m2*l1*r2*xx[3]*cos(xx[1]), 
-        2*m2*l1*r2*cos(xx[1])*(xx[2])
-    ])
-    d2Gdx2x1 = array([0, 0])
-    d2Cdx2x2 = array([
-        0, 
-        2*m2*l1*r2*sin(xx[1])
-    ])
-    d2Gdx2x2 = array([0, 0])
-    d2Cdx2x3 = array([
-        -2*m2*l1*r2*sin(xx[1]), 
-        0
-    ])
-    d2Gdx2x3 = array([0, 0])
-    d2Cdx3x1 = array([
-        -m2*l1*r2*xx[3]*cos(xx[1])-m2*l1*r2*cos(xx[1])*(xx[3]+2*xx[2]),
-        0
-    ])
-    d2Gdx3x1 = array([0, 0])
-    d2Cdx3x2 = array([
-        -2*m2*l1*r2*sin(xx[1]),
-        0
-    ])
-    d2Gdx3x2 = array([0, 0])
-    d2Cdx3x3 = array([
-        -m2*l1*r2*sin(xx[1])-m2*l1*r2*sin(xx[1]),
-        0
-    ])
-    d2Gdx3x3 = array([0, 0])
-
-    # Tensor hessian of the dynamics wrt x two times at xx,uu (d2fdxdx, 4x4x4)
-    d2fdxdx = zeros((ns, ns, ns))
-    d2fdxdx[0:2, :, :] = [0, 0, 0, 0]
-    d2fdxdx[2:4, 0, 0] = dt*(invM@(-d2Gdx0x0-d2Cdx0x0))
-    d2fdxdx[2:4, 0, 1] = dt*((invM@(-d2Gdx0x1-d2Cdx0x1))+dinvMdx1@(-dGdx[0]-dCdx[0]))
-    d2fdxdx[2:4, 0, 2] = array([0, 0])
-    d2fdxdx[2:4, 0, 3] = array([0, 0])
-    d2fdxdx[2:4, 1, 0] = dt*(invM@(-d2Gdx1x0-d2Cdx1x0)+dinvMdx1@(-dCdx[0]-dGdx[0]))
-    d2fdxdx[2:4, 1, 1] = dt*(invM@(-d2Gdx1x1-d2Cdx1x1)+d2invMdx1x1@(U-F@array([xx[2], xx[3]])-C-G)+dinvMdx1@(-dCdx[1]-dGdx[1]))
-    d2fdxdx[2:4, 1, 2] = dt*(invM@(-d2Gdx1x2-d2Cdx1x2) + dinvMdx1@(-F@array([1, 0])-dCdx[2]-dGdx[2]))
-    d2fdxdx[2:4, 1, 3] = dt*(invM@(-d2Gdx1x3-d2Cdx1x3) + dinvMdx1@(-F@array([0, 1])-dCdx[3]-dGdx[3]))
-    d2fdxdx[2:4, 2, 0] = array([0, 0])
-    d2fdxdx[2:4, 2, 1] = dt*(dinvMdx1@(-dGdx[2]-F@array([1, 0])-dCdx[2])+invM@(-d2Gdx2x1-d2Cdx2x1))
-    d2fdxdx[2:4, 2, 2] = dt*(invM@(-d2Gdx2x2-d2Cdx2x2))
-    d2fdxdx[2:4, 2, 3] = dt*(invM@(-d2Gdx2x3-d2Cdx2x3))
-    d2fdxdx[2:4, 3, 0] = array([0, 0])
-    d2fdxdx[2:4, 3, 1] = dt*(dinvMdx1@(-dGdx[3]-F@array([0, 1])-dCdx[3])+invM@(-d2Gdx3x1-d2Cdx3x1))
-    d2fdxdx[2:4, 3, 2] = dt*(invM@(-d2Gdx3x2-d2Cdx3x2))
-    d2fdxdx[2:4, 3, 3] = dt*(invM@(-d2Gdx3x3-d2Cdx3x3))
-
+    # Tensor Hessian of the dynamics wrt x two times at xx,uu (d2fdxdx, 4x4x4)
     # Tensor hessian of the dynamics wrt u two times at xx,uu (d2fdu2, 4x1x1)
-    d2fdudu = zeros((ns, ni, ni))
-    
     # Tensor hessian of the dynamics wrt x one time and u one time at xx,uu (d2fdxdu, 4x4x1)
-    d2fdxdu = zeros((ns, ns, ni))
+    # Tensor hessian of the dynamics wrt u one time and x one time at xx,uu (d2fdudx, 4x1x4)
+    d2fdxdx = []
+    d2fdudu = []
+    d2fdxdu = []
+    d2fdudx = []
+    for i in range(ns):
+        d2fdxdx.append(hessian(xxp[i], thetas))
+        d2fdudu.append(hessian(xxp[i], [u]))
+        d2fidxdu = []
+        for j in range(ns):
+            dfidxj = diff(xxp[i], thetas[j])
+            d2fidxjdu = diff(dfidxj, u)
+            d2fidxdu.append(d2fidxjdu)
+        d2fdxdu.append(Matrix(d2fidxdu))
+        dfidu = diff(xxp[i], u)
+        d2fidudx = []
+        for j in range(ns):
+            d2fidudxj = diff(dfidu, thetas[j])
+            d2fidudx.append(d2fidudxj)
+        d2fdudx.append(Matrix(d2fidudx))
 
-    # Tensor hessian of the dynamics wrt u one time and x one time at xx,uu (d2fdxdu, 4x1x4)
-    d2fdudx = zeros((ns, ni, ns))
+    print("DEDO", datetime.now())
 
-    return xxp.squeeze(), dfdx, dfdu, d2fdxdx, d2fdxdu, d2fdudx, d2fdudu
+    xxpFunction = lambdify((theta1, theta2, dtheta1, dtheta2, u), xxp)
+    dfdxFunction = lambdify((theta1, theta2, dtheta1, dtheta2, u), dfdx)
+    dfduFunction = lambdify((theta1, theta2, dtheta1, dtheta2, u), dfdu)
+    d2fdxdxFunction = lambdify((theta1, theta2, dtheta1, dtheta2, u), d2fdxdx)
+    d2fdxduFunction = lambdify((theta1, theta2, dtheta1, dtheta2, u), d2fdxdu)
+    d2fdudxFunction = lambdify((theta1, theta2, dtheta1, dtheta2, u), d2fdudx)
+    d2fduduFunction = lambdify((theta1, theta2, dtheta1, dtheta2, u), d2fdudu)
+    numericalValues = (xx[0], xx[1], xx[2], xx[3], uu)
+
+    print("DEDINO", datetime.now())
+    
+    return (
+        xxpFunction(*numericalValues).squeeze(),
+        dfdxFunction(*numericalValues),
+        dfduFunction(*numericalValues),
+        d2fdxdxFunction(*numericalValues),
+        d2fdxduFunction(*numericalValues),
+        d2fdudxFunction(*numericalValues),
+        d2fduduFunction(*numericalValues)
+    )
 
 def runDynamicFunction(discretizedDynamicFuntion, uu, xx0, TT):
     """

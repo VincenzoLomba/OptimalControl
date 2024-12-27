@@ -4,7 +4,7 @@
 
 import parameters as params
 from trajectories import pascalSnailFRAPositionTrajectory
-from numpy import diag, zeros, eye, array, squeeze, ones
+from numpy import diag, zeros, eye, array, squeeze, ones, sin, cos
 from methods import runNewtonMethodTrkTrj
 from dynamics import discretizedDynamicFRA as discretizedDynamicFuntion
 from matplotlib import pyplot
@@ -28,8 +28,12 @@ def task2():
 
     # Notice that in order to plot the trajectory as evolution in the plane of the End Effector of the FRA,
     # you should use the following equations:
-    # x = params.r1*sin(x0) + params.r2*sin(x0+x1)
-    # y = - params.r1*cos(x0) - params.r2*cos(x0+x1)
+    # x = params.r1*sin(xx_des[0,:]) + params.r2*sin(xx_des[0,:]+xx_des[1,:])
+    # y = - params.r1*cos(xx_des[0,:]) - params.r2*cos(xx_des[0,:]+xx_des[1,:])
+    # pyplot.figure()
+    # pyplot.plot(x, y)
+    # pyplot.grid()
+    # pyplot.show()
 
     # Defining cost matrices (for a trajectory tracking optimization problem) and applying the Newton Method
     QQ = diag([100, 100, 1, 1])
@@ -68,6 +72,8 @@ def task2():
     ax.plot(squeeze(t), squeeze(uu_opt[0, :]), '--', color=color_u, label='u optimal')
     ax.legend()
     pyplot.show();
+
+    return xx_opt, uu_opt
 
 if __name__ == "__main__":
     task2()

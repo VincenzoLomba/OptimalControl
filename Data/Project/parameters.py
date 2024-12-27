@@ -22,3 +22,6 @@ TCollection = SimpleNamespace(
     task1_trajectoryDuration = 10, # The duration of the trajectory (in seconds)
     task2_trajectoryDuration = 10 # The duration of the trajectory (in seconds)
 )
+
+# Absolute folder where to save the results of the various tasks
+savesFolder = 'C:\\Users\\vince\\OneDrive\\Documenti\\Università\\Magistrale\\Second Year\\Optimal Control\\pythonworkspace\\Data\\Project\\saves'
