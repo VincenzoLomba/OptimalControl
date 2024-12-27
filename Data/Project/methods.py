@@ -117,20 +117,35 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
             print("The N.M. successfully converged in", k+1, "iterations (required time: {})!".format(getTimeDifferenceAsString(datetime.now(), startingTime)))
             break
         
+        direction = deltau
         if givenFixedStepsize is None:
-            print("Computing the stepsize exploiting the Armijo's rule...")
+            print("Computing the stepsize exploiting the Armijo's rule (relying on the Newton Direction)...")
             stepsize = armijoStepSize(
-                uuCollection[:,:,k], xxCollection[:,:,k],xx_des, uu_des, xx0, ll, deltau, grdJdu, KK, sigma, TT, discretizedDynamicFuntion,
+                uuCollection[:,:,k], xxCollection[:,:,k],xx_des, uu_des, xx0, ll, direction, grdJdu, KK, sigma, TT, discretizedDynamicFuntion,
                 stageCostFunction, terminalCostFunction
             )
-            print("After exploiting the Armijo's rule, using as stepsize: {:.10}".format(stepsize))
+            if stepsize > 0:
+                print("After exploiting the Armijo's rule, using as stepsize: {:.10}".format(stepsize))
+            else:
+                print("Using now as direction the steepest descendent one and again computing the stepsize exploiting the Armijo's rule...")
+                direction = -grdJdu
+                stepsize = armijoStepSize(
+                    uuCollection[:,:,k], xxCollection[:,:,k],xx_des, uu_des, xx0, ll, direction, grdJdu, KK, sigma, TT, discretizedDynamicFuntion,
+                    stageCostFunction, terminalCostFunction, abs(stepsize)
+                )
+                if stepsize <= 0:
+                    stepsize = 1
+                    direction = deltau
+                    print("Stepsize search with the Armijo's rule still failing, using as stepsize (with the Newton Direction): {:.10}".format(stepsize))
+                else:
+                    print("After exploiting the Armijo's rule, using as stepsize: {:.10}".format(stepsize))
         else:
             print("Using as stepsize the given fixed value: {:.10}".format(givenFixedStepsize))
             stepsize = givenFixedStepsize
 
         print("Updating the state-input trajectory (in closed-loop version)")
         uuCollection[:,:,k+1], xxCollection[:,:,k+1] = updateInputStateTrajectory(
-            xx0, uuCollection[:,:,k], xxCollection[:,:,k], stepsize, deltau, KK, sigma, TT, ni, ns, discretizedDynamicFuntion
+            xx0, uuCollection[:,:,k], xxCollection[:,:,k], stepsize, direction, KK, sigma, TT, ni, ns, discretizedDynamicFuntion
         )
 
         k += 1 # Incrementing the iteration index
@@ -308,10 +323,10 @@ def solveLinearLQP(AA, BB, QQ, RR, QQT, TT, xx0):
     return KK, PP, xxout, uuout
 
 
-def armijoStepSize(uu, xx, xx_des, uu_des, xx0, ll, deltau, grdJdu, KK, sigma, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction, stepsizeInitialGuess=None):
+def armijoStepSize(uu, xx, xx_des, uu_des, xx0, ll, direction, grdJdu, KK, sigma, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction, stepsizeInitialGuess=None):
     """ Armijo's Rule for Step Size Selection """
 
-    armijoMaximumIterations = 10 # sufficient to attempt a stepsize of 0.04
+    armijoMaximumIterations = 10
     armijoBeta = 0.7
     armijoC = 0.5
     ns = xx_des.shape[0]
@@ -319,15 +334,15 @@ def armijoStepSize(uu, xx, xx_des, uu_des, xx0, ll, deltau, grdJdu, KK, sigma, T
     armijoStepsizes = []
     armijoCosts = []
 
-    armijoLinePendence = dot(squeeze(deltau), squeeze(grdJdu))
-    print(" | Armijo line pendence: {:.16f} (alias dot-product between gradJ(u) and deltau)".format(armijoLinePendence))
+    armijoLinePendence = dot(squeeze(direction), squeeze(grdJdu))
+    print(" | Armijo line pendence: {:.16f} (alias dot-product between gradJ(u) and the moving direction)".format(armijoLinePendence))
     stepsizeInitialGuess = float(1 if (stepsizeInitialGuess is None) else stepsizeInitialGuess)
     stepsize = stepsizeInitialGuess
     print(" | Using as initial guess for the Armijo stepsize: {:.10}".format(stepsize))
     for ii in range(armijoMaximumIterations):
 
         tempuu, tempxx = updateInputStateTrajectory(
-            xx0, uu, xx, stepsize, deltau, KK, sigma, TT, ni, ns, discretizedDynamicFuntion
+            xx0, uu, xx, stepsize, direction, KK, sigma, TT, ni, ns, discretizedDynamicFuntion
         )
         tempJJ = totalCostFunction(tempxx, tempuu, xx_des, uu_des, TT, stageCostFunction, terminalCostFunction)
         print(" | New cost achieved by moving with stepsize {:.10}: ".format(stepsize), tempJJ)
@@ -340,16 +355,23 @@ def armijoStepSize(uu, xx, xx_des, uu_des, xx0, ll, deltau, grdJdu, KK, sigma, T
         else:
             print(" | Detected Armijo stepsize = {:.10} (in {} iterations)".format(stepsize, ii+1))
             break
-        if ii == armijoMaximumIterations-1:
+        if ii >= armijoMaximumIterations-1:
             print(" | WARNING: no stepsize was found applying the Armijo's Rule (not converging in {} iterations)(last stepsize attempted: {:.10})!".format(
                 armijoMaximumIterations, stepsize/armijoBeta
             ))
-            stepsize = stepsizeInitialGuess
+            minCostIndex = argmin(armijoCosts)
+            if armijoCosts[minCostIndex] < ll:
+                stepsize = armijoStepsizes[minCostIndex]
+                print(" | One (or more) of the tested stepsizes led to a cost lower than the initial one, so the best one of them is selected:", stepsize)
+            else:
+                print(" | WARNING: All the attempted stepsizes leads to a cost higher than the initial one!")
+                stepsize = -stepsize
 
     # Plot the Armijo's Rule stepsize selection behavior
     armijoStepsizes.append(0)
     armijoCosts.append(ll)
     armijoStepsizes = array(armijoStepsizes)
+    plt.close('all')
     plt.figure()
     plt.clf()
     plt.title("Armijo's Rule Step Size Selection Behavior")
