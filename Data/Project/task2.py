@@ -47,7 +47,7 @@ def task2():
     newtonMethodMaxIterations = 60
     xx_opt, uu_opt = runNewtonMethodTrkTrj(
         xx_des, uu_des, xx_des[:, 0], TT, newtonMethodMaxIterations,
-        discretizedDynamicFuntion, 1e-4,
+        discretizedDynamicFuntion(), 1e-4,
         QQ, RR, QQT, None
     )
 

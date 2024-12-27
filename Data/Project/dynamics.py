@@ -71,7 +71,7 @@ def discretizedDynamicFRA():
     d2fdxdx = []
     d2fdudu = []
     d2fdxdu = []
-    d2fdudx = []
+    d2fdudx= [[[Matrix([[0]]) for _ in range(4)] for _ in range(1)] for _ in range(4)]
     for i in range(ns):
         d2fdxdx.append(hessian(xxp[i], thetas))
         d2fdudu.append(hessian(xxp[i], [u]))
@@ -82,11 +82,9 @@ def discretizedDynamicFRA():
             d2fidxdu.append(d2fidxjdu)
         d2fdxdu.append(Matrix(d2fidxdu))
         dfidu = diff(xxp[i], u)
-        d2fidudx = []
         for j in range(ns):
             d2fidudxj = diff(dfidu, thetas[j])
-            d2fidudx.append(d2fidudxj)
-        d2fdudx.append(Matrix(d2fidudx))
+            d2fdudx[i][0][j] = d2fidudxj
 
     xxpFunction = lambdify((theta1, theta2, dtheta1, dtheta2, u), xxp)
     dfdxFunction = lambdify((theta1, theta2, dtheta1, dtheta2, u), dfdx)

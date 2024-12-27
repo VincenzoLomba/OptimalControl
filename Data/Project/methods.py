@@ -138,8 +138,8 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, TT, maxIterations, discretizedDyn
                 #     direction = deltau
                 #     print("Stepsize search with the Armijo's rule still failing, using as stepsize (with the Newton Direction): {:.10}".format(stepsize))
                 # else:
-                #     print("After exploiting the Armijo's rule, using as stepsize: {:.10}".format(stepsize))
                 givenFixedStepsize = float(1)
+                print("Armijo's rule failed, using as stepsize: {:.10}".format(givenFixedStepsize))
                 stepsize = givenFixedStepsize
         else:
             print("Using as stepsize the given fixed value: {:.10}".format(givenFixedStepsize))
@@ -183,6 +183,7 @@ def solveCostateEquationTrkTrj(xx, uu, xx_des, uu_des, discretizedDynamicFuntion
     RRtilde = zeros((uu.shape[0], uu.shape[0], TT))
     QQext = zeros((xx.shape[0], xx.shape[0], xx.shape[0], TT))
     SSext = zeros((xx.shape[0], uu.shape[0], xx.shape[0], TT))
+    SSext2 = zeros((xx.shape[0], xx.shape[0], uu.shape[0], TT))
     RRext = zeros((xx.shape[0], uu.shape[0], uu.shape[0], TT))
     grdJdu = zeros_like(uu)
     ll = 0

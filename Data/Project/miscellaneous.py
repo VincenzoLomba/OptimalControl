@@ -7,9 +7,9 @@ def getTimeDifferenceAsString(endingTime, startingTime):
     minutes, seconds = divmod(remainder, 60)
     return str(hours) + " hours, " + str(minutes) + " minutes, " + str(seconds) + " seconds"
 
-def saveData(data, filename):
+def saveDataOnFile(data, filename):
     if not os.path.exists(params.savesFolder): os.makedirs(params.savesFolder)
     save(os.path.join(params.savesFolder, filename), data)
 
-def loadData(filename):
+def loadDataFromFile(filename):
     return load(os.path.join(params.savesFolder, filename + '.npy'))

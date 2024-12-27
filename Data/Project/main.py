@@ -8,7 +8,7 @@ from methods import *
 from task1 import task1
 from task2 import task2
 from task3 import task3
-from miscellaneous import saveData, loadData
+from miscellaneous import saveDataOnFile, loadDataFromFile
 from matplotlib import pyplot
 
 # Tasks selection
@@ -20,9 +20,9 @@ if (tasks[1]):
     task1()
 if (tasks[2]):
     xx_opt, uu_opt = task2()
-    saveData(xx_opt, 'task2potxx')
-    saveData(uu_opt, 'task2potuu')
-    xx_opt = loadData('task2potxx')
+    saveDataOnFile(xx_opt, 'task2potxx')
+    saveDataOnFile(uu_opt, 'task2potuu')
+    xx_opt = loadDataFromFile('task2potxx')
     x = params.r1*sin(xx_opt[0,:]) + params.r2*sin(xx_opt[0,:]+xx_opt[1,:])
     y = - params.r1*cos(xx_opt[0,:]) - params.r2*cos(xx_opt[0,:]+xx_opt[1,:])
     pyplot.plot(x, y)
