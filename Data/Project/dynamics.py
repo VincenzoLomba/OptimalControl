@@ -7,7 +7,7 @@ from datetime import datetime
 
 dt = discretizationStep # definition of the discretization step (loading from parameters)
 
-def discretizedDynamicFRA(xx,uu):
+def discretizedDynamicFRA():
     """
     Discretized Dynamics of the Flexible Robotic Arm
     Arguments:
@@ -22,8 +22,6 @@ def discretizedDynamicFRA(xx,uu):
     - d2fdudx: 4x1x4 hessian of the dynamics one time wrt u and one time wrt x at xx,uu
     - d2fdudu: 4x1x1 hessian of the dynamics wrt u two times at xx,uu
     """
-    xx = xx.squeeze()
-    uu = uu.squeeze()
 
     # Simbols definition
     theta1, theta2, dtheta1, dtheta2, u = symbols('theta1 theta2 dtheta1 dtheta2 u', real=True)
@@ -90,8 +88,6 @@ def discretizedDynamicFRA(xx,uu):
             d2fidudx.append(d2fidudxj)
         d2fdudx.append(Matrix(d2fidudx))
 
-    print("DEDO", datetime.now())
-
     xxpFunction = lambdify((theta1, theta2, dtheta1, dtheta2, u), xxp)
     dfdxFunction = lambdify((theta1, theta2, dtheta1, dtheta2, u), dfdx)
     dfduFunction = lambdify((theta1, theta2, dtheta1, dtheta2, u), dfdu)
@@ -99,19 +95,16 @@ def discretizedDynamicFRA(xx,uu):
     d2fdxduFunction = lambdify((theta1, theta2, dtheta1, dtheta2, u), d2fdxdu)
     d2fdudxFunction = lambdify((theta1, theta2, dtheta1, dtheta2, u), d2fdudx)
     d2fduduFunction = lambdify((theta1, theta2, dtheta1, dtheta2, u), d2fdudu)
-    numericalValues = (xx[0], xx[1], xx[2], xx[3], uu)
 
-    print("DEDINO", datetime.now())
-    
-    return (
-        xxpFunction(*numericalValues).squeeze(),
-        dfdxFunction(*numericalValues),
-        dfduFunction(*numericalValues),
-        d2fdxdxFunction(*numericalValues),
-        d2fdxduFunction(*numericalValues),
-        d2fdudxFunction(*numericalValues),
-        d2fduduFunction(*numericalValues)
-    )
+    return lambda xx, uu: ([ 
+        xxpFunction(*xx.squeeze(), uu.squeeze()).squeeze(),
+        dfdxFunction(*xx.squeeze(), uu.squeeze()),
+        dfduFunction(*xx.squeeze(), uu.squeeze()),
+        d2fdxdxFunction(*xx.squeeze(), uu.squeeze()),
+        d2fdxduFunction(*xx.squeeze(), uu.squeeze()),
+        d2fdudxFunction(*xx.squeeze(), uu.squeeze()),
+        d2fduduFunction(*xx.squeeze(), uu.squeeze())
+    ])
 
 def runDynamicFunction(discretizedDynamicFuntion, uu, xx0, TT):
     """
