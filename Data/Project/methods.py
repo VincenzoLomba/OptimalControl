@@ -403,7 +403,7 @@ def isAPositiveDefiniteMatrix(m):
     if not allclose(m, m.T):
         return False
     try:
-        linalg.cholesky(matrix)
+        linalg.cholesky(m)
         return True
     except linalg.LinAlgError:
         return False
