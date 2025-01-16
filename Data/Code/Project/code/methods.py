@@ -1,16 +1,14 @@
 
 # Solver for an Optimal Control Trajectory Tracking Problem (and all the involved functions)
 
-from numpy import repeat, newaxis, zeros, zeros_like, squeeze, linalg, eye, dot, seterr, argmin, allclose
+from numpy import repeat, newaxis, zeros, zeros_like, squeeze, linalg, eye, dot, seterr, argmin, allclose, linspace
 from builtins import all
 from control import dare
 from dynamics import runDynamicFunction
 from costs import totalCostFunction, stageCostTrkTrj, termCostTrkTrj
 from datetime import datetime
 from miscellaneous import getTimeDifferenceAsString, correctStateInputCurvesShapes
-
-import matplotlib.pyplot as pyplot
-from numpy import linspace as linespace
+from parameters import discretizationStep as dt
 
 def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, maxIterations, discretizedDynamicFuntion, tolerance, QQ, RR, QQT=None, fixedStepsize=None):
     """
@@ -94,7 +92,7 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, maxIterations, discretizedDynamic
         print("N.M. direction norm (||deltau||): {:.12f}".format(linalg.norm(deltau)))
 
         if descentDirectionNorm < tolerance:
-            print("The N.M. successfully converged in", k+1, "iterations (required time: {})!".format(data.getElapsedTime()))
+            print("The N.M. successfully converged in", k+1, "iterations (required time: {})!\n".format(data.getElapsedTime()))
             break
         
         direction = deltau
@@ -111,7 +109,7 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, maxIterations, discretizedDynamic
                 print("After exploiting the Armijo's rule, using as stepsize: {:.10}".format(stepsize))
             else:
                 print("ERROR: Armijo's rule failed, alias, in the moving direction the cost is always increasing, even for small stepsizes!")
-                print("The method failed in its minimum search, now ending (elapsed time: {})!".format(data.getElapsedTime()))
+                print("The method failed in its minimum search, now ending (elapsed time: {})!\n".format(data.getElapsedTime()))
                 break
         else:
             print("Using as stepsize the given fixed value: {:.10}".format(fixedStepsize))
@@ -125,7 +123,7 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, maxIterations, discretizedDynamic
         k += 1 # Incrementing the iteration index
 
         if k >= maxIterations-1:
-            print("WARNING: the N.M. was not able to converge (not converging in ", maxIterations, " iterations) (elapsed time: {})!".format(data.getElapsedTime()))
+            print("WARNING: the N.M. was not able to converge (not converging in ", maxIterations, " iterations) (elapsed time: {})!\n".format(data.getElapsedTime()))
             break
 
     data.K = k
@@ -356,13 +354,14 @@ def updateInputStateTrajectory(ns, ni, xx0, uu_old, xx_old, stepsize, deltau, KK
         return uu_new, xx_new
 
 class TrjTrkOCPData:
-    def __init__(self, ns, ni, xxDesired, uuDesired, TT, maxIterations):
+    def __init__(self, ns, ni, xx_des, uu_des, TT, maxIterations):
         self.startingTime = datetime.now()
         self.endingTime = None
         self.ns = ns
         self.ni = ni
-        self.xxDesired = xxDesired
-        self.uuDesired = uuDesired
+        self.t = linspace(0, dt*TT, TT)
+        self.xx_des = xx_des
+        self.uu_des = uu_des
         self.xxCollection = zeros((ns, TT, maxIterations))
         self.uuCollection = zeros((ni, TT, maxIterations))
         self.grdJJCollection = zeros_like(self.uuCollection)
@@ -376,10 +375,10 @@ class TrjTrkOCPData:
         return getTimeDifferenceAsString(self.endingTime, self.startingTime)
     def getOptimalTrajectory(self):
         return self.xxCollection[:,:,self.K], self.uuCollection[:,:,self.K]
-    def getOptimalCost(self):
+    def getOptimalCostGradient(self):
         return self.grdJJCollection[:,:,self.K]
     def getOptimalTrajectoryErrorsAtFinalTime(self):
         x,u = self.getOptimalTrajectory()
-        xd = self.xxDesired
-        ud = self.uuDesired
+        xd = self.xx_des
+        ud = self.uu_des
         return x[:,-1]-xd[:,-1], u[:,-2]-ud[:,-2]

@@ -9,10 +9,6 @@ from curves import generateCurves, CurveType
 from dynamics import discretizedDynamicFRA as discretizedDynamicFuntion
 from methods import runNewtonMethodTrkTrj
 
-from matplotlib import pyplot
-from numpy import linspace, squeeze
-from parameters import discretizationStep as dt
-
 def task1():
 
     # Definition of the time instants in which the desired input-state curve will evolve.

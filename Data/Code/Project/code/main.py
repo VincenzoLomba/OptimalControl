@@ -1,15 +1,18 @@
 
 # The main file of the project! It contains the code for the execution of all project's tasks!
 
-import task1, task2 # , task3, task4, task5
+from task1 import task1
+from task2 import task2
+from plots import plotStateInputCurves
 
 # Tasks selection (from one to five, set zero to avoid the execution, any other value to instead execute the particualr task)
 tasks = [1, 0, 0, 0, 0]
 
 # Tasks execution
-tasks = [None] + tasks # print(tasks)
+tasks = [None] + tasks
 if (tasks[1]):
-    task1()
+    task1Data = task1()
+    plotStateInputCurves(task1Data)
 if (tasks[2]):
     task2()
 #if (tasks[3]):
