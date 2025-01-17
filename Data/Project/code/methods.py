@@ -86,6 +86,7 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFunti
         )
 
         print("Actual cost: ", ll)
+        data.costCollection.append(ll)
 
         print("Solving the affine LQP that gives the descent direction (regularized version of the N.M. is considered)")
         KK, sigma, _, _, deltau = solveAffineLQP(AA, BB, QQtilde, RRtilde, SStilde, QQT, TT, zeros_like(xx0), qq, rr, qqT)

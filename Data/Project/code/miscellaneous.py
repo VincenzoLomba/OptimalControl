@@ -1,5 +1,5 @@
 
-# Some useful functions (and a class) that are used in the project
+# Some useful functions (and the class TrjTrkOCPData) that are used in the project
 
 import os, parameters as params
 from numpy import linspace, zeros, zeros_like
@@ -63,6 +63,7 @@ class TrjTrkOCPData:
         self.xxCollection = zeros((ns, TT, maxIterations))
         self.uuCollection = zeros((ni, TT, maxIterations))
         self.grdJJCollection = zeros_like(self.uuCollection)
+        self.costCollection = []
         self.armijoStepsizesCollection = []
         self.armijoCostsCollection = []
         self.armijoLinePendenceCollection = []
@@ -91,7 +92,6 @@ class TrjTrkOCPData:
     
     def plotStateInputOptimalTrajectoryEvolution(self, itemsList = None):
         itemsList = self.generateCleanedIndexCollection(itemsList, self.K+1)
-        print(itemsList)
         xxCollectionCast = self.xxCollection[:,:,itemsList]
         uuCollectionCast = self.uuCollection[:,:,itemsList]
         return plotter.plotStateInputCurvesEvolution(self.xx_des, self.uu_des, xxCollectionCast, uuCollectionCast, 'desired', 'optimal', dt, itemsList), itemsList
@@ -99,7 +99,6 @@ class TrjTrkOCPData:
     def plotArmijo(self, itemsList = None):
         itemsList = [int(x)-1 for x in itemsList]
         itemsList = self.generateCleanedIndexCollection(itemsList, self.K, forceExtremes = False)
-        print(itemsList)
         armijoStepsizesCollectionCast = [self.armijoStepsizesCollection[i] for i in itemsList]
         armijoCostsCollectionCast = [self.armijoCostsCollection[i] for i in itemsList]
         armijoLinePendenceCollectionCast = [self.armijoLinePendenceCollection[i] for i in itemsList]
@@ -112,10 +111,14 @@ class TrjTrkOCPData:
         ))
         return figs, itemsList
     
-    def plotStateGradientEvolution(self, upToIndex = -1, recoverFromIndex = -1):
-        indexesCollection = self.generateCleanIndexCollection(indexesCollection, self.K+1)
-        upToIndex, recoverFromIndex, amount = self.castCollectionsIndexes(upToIndex, recoverFromIndex)
-        grdJJCollectionCast = zeros_like((self.ni, self.TT, amount))
+    def plotDescentDirectionNormEvolution(self, itemsList = None):
+        itemsList = self.generateCleanedIndexCollection(itemsList, self.K+1)
+        grdJJCollectionCast = self.grdJJCollection[:,:,itemsList]
+        return plotter.plotDescentDirectionNormEvolution(grdJJCollectionCast, itemsList)
+    
+    def plotCostEvolution(self, itemsList = None):
+        itemsList = self.generateCleanedIndexCollection(itemsList, self.K+1)
+        return plotter.plotCostEvolution(self.costCollection, itemsList)
 
     def generateCleanedIndexCollection(self, dirtyIndexCollection, maxAmount, forceExtremes = True):
         if not dirtyIndexCollection: return list(range(maxAmount))

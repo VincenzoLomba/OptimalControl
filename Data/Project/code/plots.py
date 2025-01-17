@@ -1,8 +1,8 @@
 
 # Project Plotter
 
-from numpy import squeeze, linspace
-from matplotlib.pyplot import subplots, tight_layout, title, grid, show, figure, plot, xlabel, ylabel, legend, suptitle, scatter
+from numpy import squeeze, linspace, linalg
+from matplotlib.pyplot import subplots, tight_layout, title, grid, show, figure, plot, xlabel, ylabel, legend, suptitle, scatter, yscale
 import parameters as params
 
 # Color map definition (for the different states)
@@ -70,11 +70,11 @@ def plotArmijo(armijoStepsizes, armijoCosts, armijoLinePendence, pTitle, showFig
     ll = armijoCosts[-1]
     fig = figure(figsize=(8, 6))
     fig.canvas.manager.set_window_title(pTitle)
+    title(pTitle)
     plot(armijoStepsizes, armijoCosts, color='k', label='$J(\\mathbf{u}^k+stepsize*d^k)$')
     plot(armijoStepsizes, ll + armijoLinePendence*armijoStepsizes, color='r', label='$J(\\mathbf{u}^k)+stepsize*\\nabla J(\\mathbf{u}^k)^{\\top} d^k$')
     plot(armijoStepsizes, ll + params.armijoC*armijoLinePendence*armijoStepsizes, color='g', linestyle='dashed', label='$J(\\mathbf{u}^k)+stepsize*c*\\nabla J(\\mathbf{u}^k)^{\\top} d^k$')
     scatter(armijoStepsizes, armijoCosts, marker='*')
-    title(pTitle)
     grid()
     xlabel('stepsize')
     legend()
@@ -82,3 +82,31 @@ def plotArmijo(armijoStepsizes, armijoCosts, armijoLinePendence, pTitle, showFig
     if (showFigure): show()
     return fig
 
+def plotDescentDirectionNormEvolution(grdJJCollection, showFigure = True):
+
+    pTitle = "Descent Direction Norm Evolution"
+    fig = figure(figsize=(8, 6))
+    fig.canvas.manager.set_window_title(pTitle)
+    title(pTitle)
+    values = [linalg.norm(grdJJCollection[:,:,k]) for k in range(grdJJCollection.shape[2])]
+    plot(range(1, len(values)+1), values)
+    xlabel('$k$')
+    ylabel('||$d\ell(z^k)||$')
+    yscale('log')
+    grid()
+    if (showFigure): show()
+    return fig
+
+def plotCostEvolution(costs, showFigure = True):
+
+    pTitle = "Cost Evolution"
+    fig = figure(figsize=(8, 6))
+    fig.canvas.manager.set_window_title(pTitle)
+    title(pTitle)
+    plot(range(1, len(costs)+1), costs)
+    xlabel('$k$')
+    ylabel('$\ell(z^k)$')
+    yscale('log')
+    grid()
+    if (showFigure): show()
+    return fig
