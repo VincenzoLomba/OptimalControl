@@ -6,6 +6,7 @@ from numpy import squeeze, full, nan
 from matplotlib.cm import get_cmap
 from matplotlib.pyplot import subplots, tight_layout, title, grid, show, figure, plot, xlabel, ylabel, legend
 
+# def plotStateInputCurves(xxFirst, uuFirst, xxSecond, uuSecond, labelFirst, labelSecond):
 def plotStateInputCurves(data: TrjTrkOCPData):
     """
     Generates ns subplots for desired and optimal state trajectories
@@ -43,5 +44,3 @@ def plotStateInputCurves(data: TrjTrkOCPData):
     legend()
     grid(True)
     show()
-
-

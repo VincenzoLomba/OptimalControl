@@ -6,7 +6,7 @@ from parameters import ns, ni
 from numpy import pi, array, column_stack, eye
 from equilibria import searchFRAInputGivenAnEquilibria
 from curves import generateCurves, CurveType
-from dynamics import discretizedDynamicFRA as discretizedDynamicFuntion
+from dynamics import discretizedDynamicFRA as discretizedDynamicFunction
 from methods import runNewtonMethodTrkTrj
 
 def task1():
@@ -38,9 +38,10 @@ def task1():
     QQ = 12*eye(ns)
     RR = 0.001*eye(ni)
     newtonMethodMaxIterations = 20
+    tolerance = 1e-6
     trjTrkOCPData = runNewtonMethodTrkTrj(
-        xx_des, uu_des, xx_equilibrium1, newtonMethodMaxIterations,
-        discretizedDynamicFuntion, 1e-6,
+        xx_des, uu_des, newtonMethodMaxIterations,
+        discretizedDynamicFunction, tolerance,
         QQ, RR
     )
 

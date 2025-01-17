@@ -10,7 +10,7 @@ from datetime import datetime
 from miscellaneous import getTimeDifferenceAsString, correctStateInputCurvesShapes
 from parameters import discretizationStep as dt
 
-def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, maxIterations, discretizedDynamicFuntion, tolerance, QQ, RR, QQT=None, fixedStepsize=None):
+def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFuntion, tolerance, QQ, RR, QQT=None, fixedStepsize=None):
     """
     Newton's Like Method in closed loop version for an Optimal Control Trajectory Tracking Problem.
     
@@ -21,8 +21,8 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, maxIterations, discretizedDynamic
               then value for t=TT-1 is considered as the state terminal value)
     - uu_des: column vector input desired curve (dimension: ni*TT) (ni is the number of inputs of the system)
       (usage: for t from 0 to TT-2, we have the input curve;
-              for t=TT-1 we MUST have the input value that MUST be of equilibria for the system dynamic if considered within the terminal state value)
-    - xx0: column vector fixed initial state (dimensions: ns*1)
+              for t=TT-1 we MUST have the input value that MUST be of equilibria for the system dynamic if considered within the terminal state value;
+              it is also important that the state-input couple ad time t=0 is an equilibrium for the system dynamic)
     - maxIterations: maximum number of allowed iterations for the method to converge
     - discretizedDynamicFuntion: function of (xx_t, uu_t) that implements the discretized dynamics of the system that is being considered,
                                  requiring as arguments respectively the state and input values at time t,
@@ -41,6 +41,9 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, maxIterations, discretizedDynamic
     
     # Compute ni and ns and be sure that the desired curves are in the right shape
     xx_des, uu_des, ns, ni = correctStateInputCurvesShapes(xx_des, uu_des)
+
+    # Define the initial state value (considerd fixed and equal to the first value of the desired state curve)
+    xx0 = xx_des[:,0]
 
     # Retrive the TT value (the number of time steps, each one of duration dt, enough for evolve from t=0 to t=T, where [0, T] is the considered horizon)
     TT = xx_des.shape[1]; TT2 = uu_des.shape[1]
@@ -99,7 +102,7 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, xx0, maxIterations, discretizedDynamic
         if fixedStepsize is None:
             print("Computing the stepsize exploiting the Armijo's rule (relying on the Newton Direction)...")
             stepsize, armijoStepsizes, armijoCosts = armijoStepSize(
-                data.uuCollection[:,:,k], data.xxCollection[:,:,k], xx_des, uu_des, xx0,
+                data.uuCollection[:,:,k], data.xxCollection[:,:,k], xx_des, uu_des,
                 ll, direction, data.grdJJCollection[:,:,k], KK, sigma, TT,
                 discretizedDynamicFuntion, stageCostFunction, terminalCostFunction
             )
@@ -264,7 +267,7 @@ def solveLQP(AA, BB, QQ, RR, QQT, TT, xx0):
         uuout = uu
     return KK, PP, xxout, uuout
 
-def armijoStepSize(uu, xx, xx_des, uu_des, xx0, ll, direction, grdJdu, KK, sigma, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction, stepsizeInitialGuess = None):
+def armijoStepSize(uu, xx, xx_des, uu_des, ll, direction, grdJdu, KK, sigma, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction, stepsizeInitialGuess = None):
     """ Armijo's Rule for Step Size Selection """
 
     armijoMaximumIterations = 14
@@ -272,6 +275,7 @@ def armijoStepSize(uu, xx, xx_des, uu_des, xx0, ll, direction, grdJdu, KK, sigma
     armijoC = 0.5
     ns = xx_des.shape[0]
     ni = uu_des.shape[0]
+    xx0 = xx_des[:,0]
     armijoStepsizes = []
     armijoCosts = []
 
