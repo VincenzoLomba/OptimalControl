@@ -6,8 +6,7 @@ from builtins import all
 from control import dare
 from dynamics import runDynamicFunction
 from costs import totalCostFunction, stageCostTrkTrj, termCostTrkTrj
-from datetime import datetime
-from miscellaneous import getTimeDifferenceAsString, correctStateInputCurvesShapes
+from miscellaneous import TrjTrkOCPData, correctStateInputCurvesShapes
 from parameters import discretizationStep as dt
 
 def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFuntion, tolerance, QQ, RR, QQT=None, fixedStepsize=None):
@@ -356,33 +355,3 @@ def updateInputStateTrajectory(ns, ni, xx0, uu_old, xx_old, stepsize, deltau, KK
             uu_new[:,tt] = uu_old[:,tt] + KK[:,:,tt]@(xx_new[:,tt] - xx_old[:,tt]) + stepsize*sigma[:,tt]
             xx_new[:,tt+1] = discretizedDynamicFuntion(xx_new[:,tt], uu_new[:,tt])[0]
         return uu_new, xx_new
-
-class TrjTrkOCPData:
-    def __init__(self, ns, ni, xx_des, uu_des, TT, maxIterations):
-        self.startingTime = datetime.now()
-        self.endingTime = None
-        self.ns = ns
-        self.ni = ni
-        self.t = linspace(0, dt*TT, TT)
-        self.xx_des = xx_des
-        self.uu_des = uu_des
-        self.xxCollection = zeros((ns, TT, maxIterations))
-        self.uuCollection = zeros((ni, TT, maxIterations))
-        self.grdJJCollection = zeros_like(self.uuCollection)
-        self.armijoStepsizesCollection =  [[] for _ in range(maxIterations)]
-        self.armijoCostsCollection =  [[] for _ in range(maxIterations)]
-        self.K = None
-    def setEndingTime(self):
-        self.endingTime = datetime.now()
-    def getElapsedTime(self):
-        if self.endingTime == None: self.setEndingTime()
-        return getTimeDifferenceAsString(self.endingTime, self.startingTime)
-    def getOptimalTrajectory(self):
-        return self.xxCollection[:,:,self.K], self.uuCollection[:,:,self.K]
-    def getOptimalCostGradient(self):
-        return self.grdJJCollection[:,:,self.K]
-    def getOptimalTrajectoryErrorsAtFinalTime(self):
-        x,u = self.getOptimalTrajectory()
-        xd = self.xx_des
-        ud = self.uu_des
-        return x[:,-1]-xd[:,-1], u[:,-2]-ud[:,-2]

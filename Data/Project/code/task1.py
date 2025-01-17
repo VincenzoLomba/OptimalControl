@@ -8,8 +8,14 @@ from equilibria import searchFRAInputGivenAnEquilibria
 from curves import generateCurves, CurveType
 from dynamics import discretizedDynamicFRA as discretizedDynamicFunction
 from methods import runNewtonMethodTrkTrj
+from miscellaneous import loadDataFromFile, saveDataOnFile
 
-def task1():
+taskName = "task1"
+def task1(lazyExecution = False):
+
+    if lazyExecution:
+        trjTrkOCPData = loadDataFromFile(taskName)
+        if trjTrkOCPData is not None: return trjTrkOCPData
 
     # Definition of the time instants in which the desired input-state curve will evolve.
     T = array([0, 4, 8, 12])
@@ -45,6 +51,7 @@ def task1():
         QQ, RR
     )
 
+    saveDataOnFile(trjTrkOCPData, taskName)
     return trjTrkOCPData
 
 if __name__ == "__main__": task1()

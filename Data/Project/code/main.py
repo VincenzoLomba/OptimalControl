@@ -3,16 +3,17 @@
 
 from task1 import task1
 from task2 import task2
-from plots import plotStateInputCurves
 
 # Tasks selection (from one to five, set zero to avoid the execution, any other value to instead execute the particualr task)
 tasks = [1, 0, 0, 0, 0]
 
+lazyness = True
+
 # Tasks execution
 tasks = [None] + tasks
 if (tasks[1]):
-    task1Data = task1()
-    plotStateInputCurves(task1Data)
+    task1Data = task1(lazyness)
+    task1Data.plotStateInputCurves()
 if (tasks[2]):
     task2()
 #if (tasks[3]):

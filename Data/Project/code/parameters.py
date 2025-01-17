@@ -20,4 +20,6 @@ f2 = 0.1    # friction associated to the pivot of the second link
 discretizationStep = 1e-3
 
 # Absolute folder where to save the results of the various tasks
-savesFolder = 'C:\\Users\\vince\\OneDrive\\Documenti\\Università\\Magistrale\\Second Year\\Optimal Control\\pythonworkspace\\Data\\Code\\Project\\saves'
+savesFolder = 'C:\\Users\\vince\\OneDrive\\Documenti\\Università\\Magistrale\\Second Year\\Optimal Control\\pythonworkspace\\Data\\Project\\code\\saves'
+# Date format used in the name of the files
+dateFormat = "%Y-%m-%d_%H-%M-%S"
