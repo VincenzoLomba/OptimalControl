@@ -6,7 +6,7 @@ from numpy import linspace, zeros, zeros_like
 import joblib
 from parameters import discretizationStep as dt
 from datetime import datetime
-from plots import plotStateInputCurves
+import plots as plts
 
 def getTimeDifferenceAsString(endingTime, startingTime):
     timeDifference = endingTime - startingTime
@@ -54,12 +54,15 @@ def correctStateInputCurvesShapes(xx, uu):
     return xx, uu, ns, ni
 
 class TrjTrkOCPData:
+
     def __init__(self, ns, ni, xx_des, uu_des, TT, maxIterations):
         self.startingTime = datetime.now()
         self.endingTime = None
         self.ns = ns
         self.ni = ni
-        self.t = linspace(0, dt*TT, TT)
+        self.TT = TT
+        self.T = dt*TT
+        self.t = linspace(0, self.T, TT)
         self.xx_des = xx_des
         self.uu_des = uu_des
         self.xxCollection = zeros((ns, TT, maxIterations))
@@ -68,11 +71,13 @@ class TrjTrkOCPData:
         self.armijoStepsizesCollection =  [[] for _ in range(maxIterations)]
         self.armijoCostsCollection =  [[] for _ in range(maxIterations)]
         self.K = None
+
     def setEndingTime(self):
         self.endingTime = datetime.now()
     def getElapsedTime(self):
         if self.endingTime == None: self.setEndingTime()
         return getTimeDifferenceAsString(self.endingTime, self.startingTime)
+    
     def getOptimalTrajectory(self):
         return self.xxCollection[:,:,self.K], self.uuCollection[:,:,self.K]
     def getOptimalCostGradient(self):
@@ -82,7 +87,31 @@ class TrjTrkOCPData:
         xd = self.xx_des
         ud = self.uu_des
         return x[:,-1]-xd[:,-1], u[:,-2]-ud[:,-2]
-    def plotStateInputCurves(self):
+    
+    def plotStateInputOptimalTrajectory(self):
         xx_opt, uu_opt = self.getOptimalTrajectory()
-        return plotStateInputCurves(self.xx_des, self.uu_des, xx_opt, uu_opt, 'desired', 'optimal', dt)
+        return plts.plotStateInputCurves(self.xx_des, self.uu_des, xx_opt, uu_opt, 'desired', 'optimal', dt)
+    def plotStateInputOptimalTrajectoryEvolution(self, indexesCollection = None):
+        indexesCollection = self.generateCleanedIndexCollection(indexesCollection)
+        xxCollectionCast = self.xxCollection[:,:,indexesCollection]
+        uuCollectionCast = self.uuCollection[:,:,indexesCollection]
+        return plts.plotStateInputCurvesEvolution(self.xx_des, self.uu_des, xxCollectionCast, uuCollectionCast, 'desired', 'optimal', dt, indexesCollection)
+    def plotStateGradientEvolution(self, upToIndex = -1, recoverFromIndex = -1):
+        indexesCollection = self.generateCleanIndexCollection(indexesCollection)
+        upToIndex, recoverFromIndex, amount = self.castCollectionsIndexes(upToIndex, recoverFromIndex)
+        grdJJCollectionCast = zeros_like((self.ni, self.TT, amount))
+
+    def generateCleanedIndexCollection(self, dirtyIndexCollection):
+        if not dirtyIndexCollection: return list(range(self.K+1))
+        indexesCollection = [int(i) for i in dirtyIndexCollection]
+        indexesCollection.sort()
+        maxAmount = self.K+1
+        if len(indexesCollection) > maxAmount: indexesCollection = indexesCollection[:maxAmount]
+        if indexesCollection[0] != 0: indexesCollection[0] = 0
+        if indexesCollection[-1] != self.K: indexesCollection[-1] = self.K
+        return indexesCollection
+
+
+
+
 

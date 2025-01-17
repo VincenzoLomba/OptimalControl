@@ -120,7 +120,7 @@ def exponentialSpline(t1, t2, v1, v2, dt):
         kValues = curvature(dfdt, d2fd2t)
         return var(kValues) / mean(kValues)
     
-    kk = minimize(curvatureVariance, x0=1.0, bounds=[(0.1, 2.0)], method='L-BFGS-B').x[0]
+    kk = minimize(curvatureVariance, x0=1.0, bounds=[(0.05, 4.0)], method='L-BFGS-B').x[0]
     A, B, C, D = solveExponentialSpline(kk)
     f, _, _ = exponentialSplineFunctions(kk, A, B, C, D)
 

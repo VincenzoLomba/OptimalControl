@@ -1,13 +1,12 @@
 
 # Solver for an Optimal Control Trajectory Tracking Problem (and all the involved functions)
 
-from numpy import repeat, newaxis, zeros, zeros_like, squeeze, linalg, eye, dot, seterr, argmin, allclose, linspace
+from numpy import repeat, newaxis, zeros, zeros_like, squeeze, linalg, eye, dot, seterr, argmin, allclose
 from builtins import all
 from control import dare
 from dynamics import runDynamicFunction
 from costs import totalCostFunction, stageCostTrkTrj, termCostTrkTrj
 from miscellaneous import TrjTrkOCPData, correctStateInputCurvesShapes
-from parameters import discretizationStep as dt
 
 def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFuntion, tolerance, QQ, RR, QQT=None, fixedStepsize=None):
     """
@@ -94,7 +93,7 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFunti
         print("N.M. direction norm (||deltau||): {:.12f}".format(linalg.norm(deltau)))
 
         if descentDirectionNorm < tolerance:
-            print("The N.M. successfully converged in", k+1, "iterations (required time: {})!\n".format(data.getElapsedTime()))
+            print("The N.M. successfully converged in", k, "iterations (required time: {})!\n".format(data.getElapsedTime()))
             break
         
         direction = deltau

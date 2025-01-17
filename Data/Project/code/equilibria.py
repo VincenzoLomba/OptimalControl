@@ -5,9 +5,9 @@ from dynamics import discretizedDynamicFRA, dynamicG, dynamicC
 from parameters import ns,ni
 from numpy import zeros, eye, linalg, array, squeeze
 
-def getAFRAEquilibriumPoint(uu, xx0):
+def getFRAEquilibriumPoint(uu, xx0):
     """
-    Search for an equilibrium point of the Flexible Robotic Arm, for input uu, starting from a certain provided initial guess.
+    Search for a particular equilibrium point of the Flexible Robotic Arm, for input uu, starting from a certain provided initial guess.
     These points are computed using the Newton Method for zero root finding applied on the function r(x)=f(x)-x,
     where f(x) is the discretized dynamic function of the Flexible Robotic Arm itself.
     Arguments:
