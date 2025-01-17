@@ -46,7 +46,13 @@ def correctStateInputCurvesShapes(xx, uu):
         ns = 1
         xx = xx.reshape(ns, xx.shape[0])
     else: ns = xx.shape[0]
-    return xx, uu, ns, ni
+    # Retrive the TT value, alias, the number of time steps, each one of duration dt,
+    # enough for evolve from t=0 to t=T, where [0, T] is the considered horizon)
+    TT = xx.shape[1]; TT2 = uu.shape[1]
+    if TT != TT2: raise ValueError(
+        "The given state curve and input curve do not match in their second dimension, alias TT value ("+str(TT)+" VS "+str(TT2)+")"
+    )
+    return xx, uu, ns, ni, TT
 
 class TrjTrkOCPData:
 
@@ -97,7 +103,7 @@ class TrjTrkOCPData:
         return plotter.plotStateInputCurvesEvolution(self.xx_des, self.uu_des, xxCollectionCast, uuCollectionCast, 'desired', 'optimal', dt, itemsList), itemsList
     
     def plotArmijo(self, itemsList = None):
-        itemsList = [int(x)-1 for x in itemsList]
+        if itemsList is not None: itemsList = [int(x)-1 for x in itemsList]
         itemsList = self.generateCleanedIndexCollection(itemsList, self.K, forceExtremes = False)
         armijoStepsizesCollectionCast = [self.armijoStepsizesCollection[i] for i in itemsList]
         armijoCostsCollectionCast = [self.armijoCostsCollection[i] for i in itemsList]

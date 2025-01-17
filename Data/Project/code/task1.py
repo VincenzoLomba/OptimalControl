@@ -1,13 +1,13 @@
 
 # Flexible Robotic Arm Task1: from a desired quasi-step state-input curve (that evolves from one equilibrium to
-# another) to an optimal trajectory thanks to the regularized Newton's Like Method (in its closed-loop version)
+# another) to an optimal trajectory thanks to the regularized Newton's Like Method (in its closed-loop version).
 
 from parameters import ns, ni
 from numpy import pi, array, column_stack, eye
 from equilibria import searchFRAInputGivenAnEquilibria
 from curves import generateCurves, CurveType
-from dynamics import discretizedDynamicFRA as discretizedDynamicFunction
-from methods import runNewtonMethodTrkTrj
+from dynamics import discretizedDynamicFRA
+from solver import runNewtonMethodTrkTrj
 from miscellaneous import loadDataFromFile, saveDataOnFile
 
 taskName = "task1"
@@ -47,7 +47,7 @@ def task1(lazyExecution = False):
     tolerance = 1e-6
     trjTrkOCPData = runNewtonMethodTrkTrj(
         xx_des, uu_des, newtonMethodMaxIterations,
-        discretizedDynamicFunction, tolerance,
+        discretizedDynamicFRA, tolerance,
         QQ, RR
     )
 

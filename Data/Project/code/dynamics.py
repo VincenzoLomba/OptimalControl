@@ -4,6 +4,7 @@
 from parameters import I1, I2, m1, m2, r1, r2, l1, f1, f2, g, ns, ni
 from parameters import discretizationStep as dt
 from numpy import array, cos, sin, linalg, zeros
+from miscellaneous import correctStateInputCurvesShapes
 
 def discretizedDynamicFRA(xx, uu, onlyZeroOrderDynamic = False):
     """
@@ -153,3 +154,21 @@ def dynamicG(xx):
         g*(m1*r1+m2*l1)*sin(xx[0])+g*m2*r2*sin(xx[0]+xx[1]), 
         g*m2*r2*sin(xx[0]+xx[1])
     ])
+
+def computeLocalLinearization(xx_traj, uu_traj):
+    """
+    Given a feasible state-input trajectory of states and inputs,
+    this function computes the local linearization of the dynamics around that trajectory.
+    Arguments:
+    - xx_traj: nsxTT column vector state trajectory
+    - uu_traj: nixTT column vector input trajectory
+    Returns:
+    - AA: nsxnsxTT tensor of jacobians of the dynamics w.r.t. the state at each time instant
+    - BB: nsxnixTT tensor of jacobians of the dynamics w.r.t. the input at each time instant
+    """
+    xx_des, uu_des, ns, ni, TT = correctStateInputCurvesShapes(xx_traj, uu_traj)
+    AA = zeros((ns, ns, TT))
+    BB = zeros((ns, ni, TT))
+    for tt in range(TT): 
+        AA[:,:,tt], BB[:,:,tt] = discretizedDynamicFRA(xx_traj[:,tt], uu_traj[:,tt])[1:3]
+    return AA, BB
