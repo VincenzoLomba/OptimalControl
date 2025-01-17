@@ -1,12 +1,13 @@
 
 # Solver for an Optimal Control Trajectory Tracking Problem (and all the involved functions)
 
-from numpy import repeat, newaxis, zeros, zeros_like, squeeze, linalg, eye, dot, seterr, argmin, allclose
+from numpy import repeat, newaxis, zeros, zeros_like, squeeze, linalg, eye, dot, seterr, argmin, allclose, array
 from builtins import all
 from control import dare
 from dynamics import runDynamicFunction
 from costs import totalCostFunction, stageCostTrkTrj, termCostTrkTrj
 from miscellaneous import TrjTrkOCPData, correctStateInputCurvesShapes
+import parameters as params
 
 def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFuntion, tolerance, QQ, RR, QQT=None, fixedStepsize=None):
     """
@@ -99,13 +100,14 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFunti
         direction = deltau
         if fixedStepsize is None:
             print("Computing the stepsize exploiting the Armijo's rule (relying on the Newton Direction)...")
-            stepsize, armijoStepsizes, armijoCosts = armijoStepSize(
+            stepsize, armijoStepsizes, armijoCosts, armijoLinePendence = armijoStepSize(
                 data.uuCollection[:,:,k], data.xxCollection[:,:,k], xx_des, uu_des,
                 ll, direction, data.grdJJCollection[:,:,k], KK, sigma, TT,
                 discretizedDynamicFuntion, stageCostFunction, terminalCostFunction
             )
             data.armijoStepsizesCollection.append(armijoStepsizes)
             data.armijoCostsCollection.append(armijoCosts)
+            data.armijoLinePendenceCollection.append(armijoLinePendence)
             if stepsize > 0:
                 print("After exploiting the Armijo's rule, using as stepsize: {:.10}".format(stepsize))
             else:
@@ -269,8 +271,8 @@ def armijoStepSize(uu, xx, xx_des, uu_des, ll, direction, grdJdu, KK, sigma, TT,
     """ Armijo's Rule for Step Size Selection """
 
     armijoMaximumIterations = 14
-    armijoBeta = 0.7
-    armijoC = 0.5
+    armijoBeta = params.armijoBeta
+    armijoC = params.armijoC
     ns = xx_des.shape[0]
     ni = uu_des.shape[0]
     xx0 = xx_des[:,0]
@@ -318,7 +320,7 @@ def armijoStepSize(uu, xx, xx_des, uu_des, ll, direction, grdJdu, KK, sigma, TT,
 
     armijoStepsizes.append(0)
     armijoCosts.append(ll)
-    return stepsize, armijoStepsizes, armijoCosts
+    return stepsize, array(armijoStepsizes), array(armijoCosts), array(armijoLinePendence)
 
 def solveARE(A, B, Q, R, S):
     # https://en.wikipedia.org/wiki/Linear%E2%80%93quadratic_regulator#Infinite-horizon,_discrete-time

@@ -2,7 +2,8 @@
 # Project Plotter
 
 from numpy import squeeze, linspace
-from matplotlib.pyplot import subplots, tight_layout, title, grid, show, figure, plot, xlabel, ylabel, legend, suptitle
+from matplotlib.pyplot import subplots, tight_layout, title, grid, show, figure, plot, xlabel, ylabel, legend, suptitle, scatter
+import parameters as params
 
 # Color map definition (for the different states)
 colorMap = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
@@ -64,4 +65,20 @@ def plotStateInputCurvesEvolution(xxFirst, uuFirst, xxSecondCollection, uuSecond
 
     return xFigure, uFigure
 
+def plotArmijo(armijoStepsizes, armijoCosts, armijoLinePendence, pTitle, showFigure = True):
+    """ Generates a plot for the Armijo's Rule step size selection behavior"""
+    ll = armijoCosts[-1]
+    fig = figure(figsize=(8, 6))
+    fig.canvas.manager.set_window_title(pTitle)
+    plot(armijoStepsizes, armijoCosts, color='k', label='$J(\\mathbf{u}^k+stepsize*d^k)$')
+    plot(armijoStepsizes, ll + armijoLinePendence*armijoStepsizes, color='r', label='$J(\\mathbf{u}^k)+stepsize*\\nabla J(\\mathbf{u}^k)^{\\top} d^k$')
+    plot(armijoStepsizes, ll + params.armijoC*armijoLinePendence*armijoStepsizes, color='g', linestyle='dashed', label='$J(\\mathbf{u}^k)+stepsize*c*\\nabla J(\\mathbf{u}^k)^{\\top} d^k$')
+    scatter(armijoStepsizes, armijoCosts, marker='*')
+    title(pTitle)
+    grid()
+    xlabel('stepsize')
+    legend()
+    tight_layout()
+    if (showFigure): show()
+    return fig
 

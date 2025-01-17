@@ -16,6 +16,10 @@ g = 9.81    # gravity
 f1 = 0.1    # friction associated to the pivot of the first link
 f2 = 0.1    # friction associated to the pivot of the second link
 
+# Armijo Rule for stepsize selection parameters
+armijoBeta = 0.7
+armijoC = 0.5
+
 # The discretization step (used for example in the FRA discretized dynamic), in seconds
 discretizationStep = 1e-3
 

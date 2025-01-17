@@ -6,7 +6,7 @@ from numpy import linspace, zeros, zeros_like
 import joblib
 from parameters import discretizationStep as dt
 from datetime import datetime
-import plots as plts
+import plots as plotter
 
 def getTimeDifferenceAsString(endingTime, startingTime):
     timeDifference = endingTime - startingTime
@@ -37,11 +37,6 @@ def loadDataFromFile(filename):
 
     return joblib.load(os.path.join(params.savesFolder, fullFileName))
 
-def representDate(value):
-    try:
-        datetime.fromisoformat(value); return True
-    except (ValueError, TypeError): return False
-
 def correctStateInputCurvesShapes(xx, uu):
     if (uu.ndim == 1):
         ni = 1
@@ -68,8 +63,9 @@ class TrjTrkOCPData:
         self.xxCollection = zeros((ns, TT, maxIterations))
         self.uuCollection = zeros((ni, TT, maxIterations))
         self.grdJJCollection = zeros_like(self.uuCollection)
-        self.armijoStepsizesCollection =  [[] for _ in range(maxIterations)]
-        self.armijoCostsCollection =  [[] for _ in range(maxIterations)]
+        self.armijoStepsizesCollection = []
+        self.armijoCostsCollection = []
+        self.armijoLinePendenceCollection = []
         self.K = None
 
     def setEndingTime(self):
@@ -77,6 +73,7 @@ class TrjTrkOCPData:
     def getElapsedTime(self):
         if self.endingTime == None: self.setEndingTime()
         return getTimeDifferenceAsString(self.endingTime, self.startingTime)
+    def getNumberOfNeededIteration(self): return self.K
     
     def getOptimalTrajectory(self):
         return self.xxCollection[:,:,self.K], self.uuCollection[:,:,self.K]
@@ -90,25 +87,44 @@ class TrjTrkOCPData:
     
     def plotStateInputOptimalTrajectory(self):
         xx_opt, uu_opt = self.getOptimalTrajectory()
-        return plts.plotStateInputCurves(self.xx_des, self.uu_des, xx_opt, uu_opt, 'desired', 'optimal', dt)
-    def plotStateInputOptimalTrajectoryEvolution(self, indexesCollection = None):
-        indexesCollection = self.generateCleanedIndexCollection(indexesCollection)
-        xxCollectionCast = self.xxCollection[:,:,indexesCollection]
-        uuCollectionCast = self.uuCollection[:,:,indexesCollection]
-        return plts.plotStateInputCurvesEvolution(self.xx_des, self.uu_des, xxCollectionCast, uuCollectionCast, 'desired', 'optimal', dt, indexesCollection)
+        return plotter.plotStateInputCurves(self.xx_des, self.uu_des, xx_opt, uu_opt, 'desired', 'optimal', dt)
+    
+    def plotStateInputOptimalTrajectoryEvolution(self, itemsList = None):
+        itemsList = self.generateCleanedIndexCollection(itemsList, self.K+1)
+        print(itemsList)
+        xxCollectionCast = self.xxCollection[:,:,itemsList]
+        uuCollectionCast = self.uuCollection[:,:,itemsList]
+        return plotter.plotStateInputCurvesEvolution(self.xx_des, self.uu_des, xxCollectionCast, uuCollectionCast, 'desired', 'optimal', dt, itemsList), itemsList
+    
+    def plotArmijo(self, itemsList = None):
+        itemsList = [int(x)-1 for x in itemsList]
+        itemsList = self.generateCleanedIndexCollection(itemsList, self.K, forceExtremes = False)
+        print(itemsList)
+        armijoStepsizesCollectionCast = [self.armijoStepsizesCollection[i] for i in itemsList]
+        armijoCostsCollectionCast = [self.armijoCostsCollection[i] for i in itemsList]
+        armijoLinePendenceCollectionCast = [self.armijoLinePendenceCollection[i] for i in itemsList]
+        figs = []
+        for i in range(len(itemsList)): figs.append(
+            plotter.plotArmijo(armijoStepsizesCollectionCast[i],
+            armijoCostsCollectionCast[i],
+            armijoLinePendenceCollectionCast[i],
+            f'Armijo\'s Rule Step Size Selection Behavior for iteration k={itemsList[i]+1}',
+        ))
+        return figs, itemsList
+    
     def plotStateGradientEvolution(self, upToIndex = -1, recoverFromIndex = -1):
-        indexesCollection = self.generateCleanIndexCollection(indexesCollection)
+        indexesCollection = self.generateCleanIndexCollection(indexesCollection, self.K+1)
         upToIndex, recoverFromIndex, amount = self.castCollectionsIndexes(upToIndex, recoverFromIndex)
         grdJJCollectionCast = zeros_like((self.ni, self.TT, amount))
 
-    def generateCleanedIndexCollection(self, dirtyIndexCollection):
-        if not dirtyIndexCollection: return list(range(self.K+1))
+    def generateCleanedIndexCollection(self, dirtyIndexCollection, maxAmount, forceExtremes = True):
+        if not dirtyIndexCollection: return list(range(maxAmount))
         indexesCollection = [int(i) for i in dirtyIndexCollection]
+        filter(lambda x: x >= 0 and x < maxAmount, indexesCollection)
         indexesCollection.sort()
-        maxAmount = self.K+1
         if len(indexesCollection) > maxAmount: indexesCollection = indexesCollection[:maxAmount]
-        if indexesCollection[0] != 0: indexesCollection[0] = 0
-        if indexesCollection[-1] != self.K: indexesCollection[-1] = self.K
+        if indexesCollection[0] != 0 and forceExtremes: indexesCollection[0] = 0
+        if indexesCollection[-1] != maxAmount-1 and forceExtremes: indexesCollection[-1] = maxAmount-1
         return indexesCollection
 
 

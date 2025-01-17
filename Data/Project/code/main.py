@@ -13,8 +13,10 @@ lazyness = True
 tasks = [None] + tasks
 if (tasks[1]):
     task1Data = task1(lazyness)
+    print(task1Data.getNumberOfNeededIteration())
     task1Data.plotStateInputOptimalTrajectory()
-    task1Data.plotStateInputOptimalTrajectoryEvolution([0,1,2, task1Data.K+1])
+    task1Data.plotStateInputOptimalTrajectoryEvolution([0,1,2, task1Data.K])
+    task1Data.plotArmijo([3, 4, 8, 9])
 if (tasks[2]):
     task2()
 #if (tasks[3]):
