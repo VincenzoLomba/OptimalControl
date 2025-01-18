@@ -3,6 +3,8 @@
 
 from miscellaneous import correctStateInputCurvesShapes
 from numpy import zeros, std, random
+from cvxpy import Variable, Minimize, Problem, quad_form
+
 
 def runLQRController(xx_traj, uu_traj, KK, discretizedDynamicFunction, xx0Noise = None): 
 
@@ -15,15 +17,74 @@ def runLQRController(xx_traj, uu_traj, KK, discretizedDynamicFunction, xx0Noise 
     for tt in range(TT-1): 
         # Evolving the dynamic of the system using the LQR (in a closed loop fashion)
         uu_track[:,tt] = uu_traj[:, tt] + KK[:,:,tt]@(xx_track[:,tt] - xx_traj[:,tt])
-        xx_track[:,tt+1] = discretizedDynamicFunction(xx_track[:,tt], uu_track[:,tt])[0]
+        xx_track[:,tt+1] = discretizedDynamicFunction(xx_track[:,tt], uu_track[:,tt], onlyZeroOrderDynamic = True)
 
     return xx_track, uu_track
 
-def generateInitialStateNoise(xx, noiseStdPercentage, K = None, randomNumberGenerator = None):
+def runMPController(xx_traj, uu_traj, AA, BB, QQ, RR, QQT, MPC_TT, discretizedDynamicFunction, xx0Noise = None): 
+
+    xx_traj, uu_traj, ns, ni, TT = correctStateInputCurvesShapes(xx_traj, uu_traj)
+    xx_real = zeros((ns, TT))
+    uu_real = zeros((ni, TT))
+
+    xx_real[:,0] = xx_traj[:,0] + (xx0Noise if xx0Noise is not None else 0)
+
+    for tt in range(TT-MPC_TT-1): 
+        xxt = xx_real[:,tt]
+        uu_real[:,tt] = modelPredictiveControl(
+            xxt, xx_traj[:,tt:tt+MPC_TT], uu_traj[:,tt:tt+MPC_TT],
+            AA[:,:,tt:tt+MPC_TT], BB[:,:,tt:tt+MPC_TT], QQ, RR, QQT, MPC_TT)[2]
+        xx_real[:,tt+1] = discretizedDynamicFunction(xx_real[:,tt], uu_real[:,tt], onlyZeroOrderDynamic = True)
+    
+    return xx_real, uu_real
+
+def modelPredictiveControl(xxt, xx_des, uu_des, AA, BB, QQ, RR, QQT, MPC_TT): 
+    '''
+        This method solves a linear constrained MPC problem by the use of cvxpy library
+
+        Arguments: 
+            1) xxt initial condition at time t
+            2) AA, BB: Linearized dynamics matrices
+            3) QQ, RR, QQT: Cost matrices
+            4) TT_mpc: Prediction time horizon
+
+        Outputs: 
+            1) Γ(t) := (xx, uu)(t): Predicted trajectory
+            2) Optimal input uut to be applied to xx at istant t
+    '''
+    xx_des, uu_des, ns, ni, _ = correctStateInputCurvesShapes(xx_des, uu_des)
+    xxt = xxt.squeeze()
+
+    # Definition of MPC variables
+    xx = Variable((ns, MPC_TT))
+    uu = Variable((ni, MPC_TT))
+
+    # Definition of cost function and constraints variables
+    cost = 0
+    constr = []
+
+    # Definition the initial condition constraint
+    constr += [xx[:,0] == xxt]
+
+    # Definition of the stage cost functions and the equality constraints related to the linearized dynamics
+    for tt in range(MPC_TT-1): 
+        cost += quad_form((xx[:,tt]-xx_des[:,tt]), QQ) + quad_form((uu[:,tt]-uu_des[:,tt]), RR)
+        constr += [xx[:,tt+1] == AA[:,:,tt]@xx[:,tt] + BB[:,:,tt]@uu[:,tt]]
+
+    # Definition of the terminal cost function
+    cost += quad_form((xx[:,MPC_TT-1] - xx_des[:,MPC_TT-1]), QQT)
+
+    # Solving the MPC problem
+    problem = Problem(Minimize(cost), constr)
+    problem.solve()
+    if(problem.status == "Unfeasible"): raise RuntimeError("Unfeasible MPC problem!")
+    inputAction = uu[:,0].value
+    return uu.value, xx.value, inputAction
+
+def generateInitialStateNoise(xx, noiseStdPercentage, K = 1, randomNumberGenerator = None):
     
     ns = xx.shape[0]
     if not noiseStdPercentage or noiseStdPercentage <= 0: return zeros(ns)
-    if not K or K <= 0: K = 1
 
     # Fix a local r.n.g. related to a local seed in order to generate the same noise (in the various Tasks)
     if randomNumberGenerator is None: randomNumberGenerator = random.default_rng(2828)  

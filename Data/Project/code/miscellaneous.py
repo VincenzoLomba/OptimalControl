@@ -7,6 +7,7 @@ import joblib
 from parameters import discretizationStep as dt
 from datetime import datetime
 import plots as plotter
+from enum import Enum
 
 def getTimeDifferenceAsString(endingTime, startingTime):
     timeDifference = endingTime - startingTime
@@ -136,15 +137,16 @@ class TrjTrkOCPData:
         itemsList = generateCleanedIndexCollection(itemsList, self.K+1)
         return plotter.plotCostEvolution(self.costCollection, itemsList)
 
+class RegulatorType(Enum): LQR = "LQR"; MPC = "MPC"
 class TrjTrkCntrlData:
 
-    def __init__(self, xx_traj, uu_traj, tracks, noises):
+    def __init__(self, xx_traj, uu_traj, tracks, noises, regulatorType):
         self.xx_traj = xx_traj
         self.uu_traj = uu_traj
         self.tracks = tracks
         self.noises = noises
-        self.noNoiseIndex = argmin(noises)
-    
+        self.regulatorType = regulatorType
+
     def getTrack(self, index): return self.tracks[index][0:2]
     def getNoise(self, index): return self.noises[index]
     def getTrackLength(self): return len(self.tracks)
@@ -156,8 +158,8 @@ class TrjTrkCntrlData:
         return plotter.plotStateInputCurves(
             self.xx_traj, self.uu_traj, x, u,
             'reference', 'tracked', dt,
-            f'States Trajectories Tracked with LQR (initial state noise Δxx0={noise})',
-            f'Input Trajectory Tracked with LQR (initial state noise Δxx0={noise})',
+            f'States Trajectories Tracked with {self.regulatorType} (initial state noise Δxx0={noise})',
+            f'Input Trajectory Tracked with {self.regulatorType} (initial state noise Δxx0={noise})',
         )
 
 
