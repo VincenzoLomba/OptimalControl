@@ -14,8 +14,8 @@ taskName = "task2"
 def task2(lazyExecution = False):
 
     if lazyExecution:
-        trjTrkOCPData = loadDataFromFile(taskName)
-        if trjTrkOCPData is not None: return trjTrkOCPData
+        trjTrkOCPData, RR, QQ = loadDataFromFile(taskName)[0:3]
+        if trjTrkOCPData is not None and RR is not None and QQ is not None: return trjTrkOCPData, RR, QQ
 
     # Definition of the time instants in which the desired input-state curve will evolve.
     T = array([0, 4, 8, 12, 16, 20, 24])
@@ -27,7 +27,7 @@ def task2(lazyExecution = False):
     angle1 = (pi/180)*60
     angle2 = (pi/180)*30
     angle3 = (pi/180)*45
-    angle4 = (pi/180)*120
+    angle4 = (pi/180)*90
     xx_equilibrium1 = array([angle1,-angle1,0,0])
     xx_equilibrium2 = array([-angle2,angle2,0,0])
     xx_equilibrium3 = array([angle3,-angle3,0,0])
@@ -46,9 +46,9 @@ def task2(lazyExecution = False):
     uu_des = array([searchFRAInputGivenAnEquilibria(xx_des[0,i]) for i in range(len(t))]).reshape(1, len(t))
 
     # Defining cost matrices (for a trajectory tracking optimization probl0.001em) and applying the Newton Method
-    QQ = diag([15,15,1,1])
+    QQ = diag([16,16,1,1])
     RR = 0.001*eye(ni)
-    newtonMethodMaxIterations = 40
+    newtonMethodMaxIterations = 35
     tolerance = 1e-6
     trjTrkOCPData = runNewtonMethodTrkTrj(
         xx_des, uu_des, newtonMethodMaxIterations,

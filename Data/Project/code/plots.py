@@ -8,10 +8,10 @@ import parameters as params
 # Color map definition (for the different states)
 colorMap = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
 
-def plotStateInputCurves(xxFirst, uuFirst, xxSecond, uuSecond, labelFirst, labelSecond, dt, showFigures = True):
-    return plotStateInputCurvesEvolution(xxFirst, uuFirst, xxSecond, uuSecond, labelFirst, labelSecond, dt, None, showFigures)
+def plotStateInputCurves(xxFirst, uuFirst, xxSecond, uuSecond, labelFirst, labelSecond, dt, supTitleFirst = None, supTitleSecond = None, showFigures = True):
+    return plotStateInputCurvesEvolution(xxFirst, uuFirst, xxSecond, uuSecond, labelFirst, labelSecond, dt, supTitleFirst, supTitleSecond, None, showFigures)
 
-def plotStateInputCurvesEvolution(xxFirst, uuFirst, xxSecondCollection, uuSecondCollection, labelFirst, labelSecond, dt, indexesCollection = None, showFigures = True):
+def plotStateInputCurvesEvolution(xxFirst, uuFirst, xxSecondCollection, uuSecondCollection, labelFirst, labelSecond, dt, supTitleFirst = None, supTitleSecond = None, indexesCollection = None, showFigures = True):
     """
     Generates ns subplots for desired and optimal state trajectories and a separate plot for the desired and optimal (supposed single) input trajectory
     """
@@ -32,8 +32,9 @@ def plotStateInputCurvesEvolution(xxFirst, uuFirst, xxSecondCollection, uuSecond
     # Creating various subplots (one for each state)
     xFigureTitle = "States Trajectories" + (f' for iterations: k∈{str(indexesCollection)}' if withEvolution else '')
     xFigure, axes = subplots(int(ns/2), 2, figsize = (10, 8))
-    xFigure.canvas.manager.set_window_title(xFigureTitle)
-    if withEvolution: suptitle(xFigureTitle)
+    xFigure.canvas.manager.set_window_title(xFigureTitle if not supTitleFirst else supTitleFirst)
+    if supTitleFirst: suptitle(supTitleFirst)
+    elif withEvolution: suptitle(xFigureTitle)
     axes = axes.flatten()  # Axes flattening for a simpler indexing
     for i in range(ns):
         ax = axes[i]
@@ -51,8 +52,8 @@ def plotStateInputCurvesEvolution(xxFirst, uuFirst, xxSecondCollection, uuSecond
 
     uFigureTitle = "Input Trajectory" + (f' for iterations k∈{str(indexesCollection)}' if withEvolution else '')
     uFigure = figure(figsize=(8, 6))
-    uFigure.canvas.manager.set_window_title(uFigureTitle)
-    title(uFigureTitle)
+    uFigure.canvas.manager.set_window_title(uFigureTitle if not supTitleSecond else supTitleSecond)
+    title(uFigureTitle if not supTitleSecond else supTitleSecond)
     line, = plot(tu, uuFirst, '--', label = f'{labelFirst} input')
     color = line.get_color()
     for k in range(KK):

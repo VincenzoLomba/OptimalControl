@@ -2,7 +2,7 @@
 # Some useful functions (and the class TrjTrkOCPData) that are used in the project
 
 import os, parameters as params
-from numpy import linspace, zeros, zeros_like
+from numpy import linspace, zeros, zeros_like, argmin
 import joblib
 from parameters import discretizationStep as dt
 from datetime import datetime
@@ -54,6 +54,16 @@ def correctStateInputCurvesShapes(xx, uu):
     )
     return xx, uu, ns, ni, TT
 
+def generateCleanedIndexCollection(dirtyIndexCollection, maxAmount, forceExtremes = True):
+        if not dirtyIndexCollection: return list(range(maxAmount))
+        indexesCollection = [int(i) for i in dirtyIndexCollection]
+        filter(lambda x: x >= 0 and x < maxAmount, indexesCollection)
+        indexesCollection.sort()
+        if len(indexesCollection) > maxAmount: indexesCollection = indexesCollection[:maxAmount]
+        if indexesCollection[0] != 0 and forceExtremes: indexesCollection[0] = 0
+        if indexesCollection[-1] != maxAmount-1 and forceExtremes: indexesCollection[-1] = maxAmount-1
+        return indexesCollection
+
 class TrjTrkOCPData:
 
     def __init__(self, ns, ni, xx_des, uu_des, TT, maxIterations):
@@ -97,14 +107,14 @@ class TrjTrkOCPData:
         return plotter.plotStateInputCurves(self.xx_des, self.uu_des, xx_opt, uu_opt, 'desired', 'optimal', dt)
     
     def plotStateInputOptimalTrajectoryEvolution(self, itemsList = None):
-        itemsList = self.generateCleanedIndexCollection(itemsList, self.K+1)
+        itemsList = generateCleanedIndexCollection(itemsList, self.K+1)
         xxCollectionCast = self.xxCollection[:,:,itemsList]
         uuCollectionCast = self.uuCollection[:,:,itemsList]
         return plotter.plotStateInputCurvesEvolution(self.xx_des, self.uu_des, xxCollectionCast, uuCollectionCast, 'desired', 'optimal', dt, itemsList), itemsList
     
     def plotArmijo(self, itemsList = None):
         if itemsList is not None: itemsList = [int(x)-1 for x in itemsList]
-        itemsList = self.generateCleanedIndexCollection(itemsList, self.K, forceExtremes = False)
+        itemsList = generateCleanedIndexCollection(itemsList, self.K, forceExtremes = False)
         armijoStepsizesCollectionCast = [self.armijoStepsizesCollection[i] for i in itemsList]
         armijoCostsCollectionCast = [self.armijoCostsCollection[i] for i in itemsList]
         armijoLinePendenceCollectionCast = [self.armijoLinePendenceCollection[i] for i in itemsList]
@@ -118,25 +128,37 @@ class TrjTrkOCPData:
         return figs, itemsList
     
     def plotDescentDirectionNormEvolution(self, itemsList = None):
-        itemsList = self.generateCleanedIndexCollection(itemsList, self.K+1)
+        itemsList = generateCleanedIndexCollection(itemsList, self.K+1)
         grdJJCollectionCast = self.grdJJCollection[:,:,itemsList]
         return plotter.plotDescentDirectionNormEvolution(grdJJCollectionCast, itemsList)
     
     def plotCostEvolution(self, itemsList = None):
-        itemsList = self.generateCleanedIndexCollection(itemsList, self.K+1)
+        itemsList = generateCleanedIndexCollection(itemsList, self.K+1)
         return plotter.plotCostEvolution(self.costCollection, itemsList)
 
-    def generateCleanedIndexCollection(self, dirtyIndexCollection, maxAmount, forceExtremes = True):
-        if not dirtyIndexCollection: return list(range(maxAmount))
-        indexesCollection = [int(i) for i in dirtyIndexCollection]
-        filter(lambda x: x >= 0 and x < maxAmount, indexesCollection)
-        indexesCollection.sort()
-        if len(indexesCollection) > maxAmount: indexesCollection = indexesCollection[:maxAmount]
-        if indexesCollection[0] != 0 and forceExtremes: indexesCollection[0] = 0
-        if indexesCollection[-1] != maxAmount-1 and forceExtremes: indexesCollection[-1] = maxAmount-1
-        return indexesCollection
+class TrjTrkCntrlData:
 
+    def __init__(self, xx_traj, uu_traj, tracks, noises):
+        self.xx_traj = xx_traj
+        self.uu_traj = uu_traj
+        self.tracks = tracks
+        self.noises = noises
+        self.noNoiseIndex = argmin(noises)
+    
+    def getTrack(self, index): return self.tracks[index][0:2]
+    def getNoise(self, index): return self.noises[index]
+    def getTrackLength(self): return len(self.tracks)
 
+    def plotTrack(self, index):
+
+        x, u = self.getTrack(index)
+        noise = ', '.join([f"{n:.3f}" for n in self.getNoise(index)])
+        return plotter.plotStateInputCurves(
+            self.xx_traj, self.uu_traj, x, u,
+            'reference', 'tracked', dt,
+            f'States Trajectories Tracked with LQR (initial state noise Δxx0={noise})',
+            f'Input Trajectory Tracked with LQR (initial state noise Δxx0={noise})',
+        )
 
 
 

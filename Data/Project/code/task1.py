@@ -43,7 +43,7 @@ def task1(lazyExecution = False):
     # Defining cost matrices (for a trajectory tracking optimization probl0.001em) and applying the Newton Method
     QQ = 12*eye(ns)
     RR = 0.001*eye(ni)
-    newtonMethodMaxIterations = 20
+    newtonMethodMaxIterations = 42
     tolerance = 1e-6
     trjTrkOCPData = runNewtonMethodTrkTrj(
         xx_des, uu_des, newtonMethodMaxIterations,

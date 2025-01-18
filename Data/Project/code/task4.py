@@ -1,6 +1,6 @@
 
-# Flexible Robotic Arm Task3: after linearizing the dynamics of the FRA around a given trajectory,
-# exploiting the LQR algorithm to define the optimal feedback controller to track the said trajectory.
+# Flexible Robotic Arm Task4: after linearizing the dynamics of the FRA around a
+# given trajectory, exploiting an MPC algorithm to track the said trajectory.
 
 from miscellaneous import correctStateInputCurvesShapes, saveDataOnFile, loadDataFromFile, TrjTrkCntrlData
 from dynamics import computeLocalLinearization
