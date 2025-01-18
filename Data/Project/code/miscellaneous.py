@@ -15,6 +15,8 @@ def getTimeDifferenceAsString(endingTime, startingTime):
     minutes, seconds = divmod(remainder, 60)
     return str(hours) + " hours, " + str(minutes) + " minutes, " + str(seconds) + " seconds"
 
+def getTime(): return datetime.now().strftime(params.dateFormat)
+
 def saveDataOnFile(data, filename):
     
     if not os.path.exists(params.savesFolder): os.makedirs(params.savesFolder)
@@ -149,7 +151,7 @@ class TrjTrkCntrlData:
 
     def getTrack(self, index): return self.tracks[index][0:2]
     def getNoise(self, index): return self.noises[index]
-    def getTrackLength(self): return len(self.tracks)
+    def getTracksLength(self): return len(self.tracks)
 
     def plotTrack(self, index):
 
@@ -158,8 +160,8 @@ class TrjTrkCntrlData:
         return plotter.plotStateInputCurves(
             self.xx_traj, self.uu_traj, x, u,
             'reference', 'tracked', dt,
-            f'States Trajectories Tracked with {self.regulatorType} (initial state noise Δxx0={noise})',
-            f'Input Trajectory Tracked with {self.regulatorType} (initial state noise Δxx0={noise})',
+            f'States Trajectories Tracked with {str(self.regulatorType)} (initial state noise Δxx0={noise})',
+            f'Input Trajectory Tracked with {str(self.regulatorType)} (initial state noise Δxx0={noise})',
         )
 
 

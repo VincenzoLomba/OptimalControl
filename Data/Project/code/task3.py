@@ -21,7 +21,7 @@ def task3(xx_des, uu_des, xx_traj, uu_traj, QQ, RR, lazyExecution = False):
     QQT = solveARE(AAlin[:,:,-1], BBlin[:,:,-1], QQ, RR, None)
     KK = solveLQP(AAlin, BBlin, QQ, RR, QQT, TT, xx_traj[:,0])[0]
 
-    noiseLevels = [0.0, 0.5, 1]
+    noiseLevels = [0.0, 0.4, 0.8]
     noises = [generateInitialStateNoise(xx_traj, np) for np in noiseLevels]
     tracks = [runLQRController(xx_traj, uu_traj, KK, discretizedDynamicFRA, noise) for noise in noises]
 

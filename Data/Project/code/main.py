@@ -6,6 +6,7 @@ from task1 import task1
 from task2 import task2
 from task3 import task3
 from task4 import task4
+from task5 import task5
 
 # Tasks selection (from one to five, for each task, set zero to avoid the
 # execution, any other value to instead execute the particualr task)
@@ -13,7 +14,7 @@ tasks = [0, 0, 0, 1, 0]
 
 # Lazyness selection (from one to five, for each task, set zero to avoid the laziness, any other
 # value to force the single task to load the results data from the last saved file (if it exists)
-lazyness = [False, False, False, False, True]
+lazyness = [False, False, False, False, False]
 
 # Correcting the tasks and lazyness lists (adding an empty element at zero index)
 tasks = [None] + tasks
@@ -50,16 +51,29 @@ if (tasks[3]):
     for i in range(task3Data.getTrackLength()): task3Data.plotTrack(i)
 
 if (tasks[4]):
-    MPC_NTT = 2
     task4Data: TrjTrkCntrlData
     task2Data, QQ, RR = task2(lazyExecution = True)
     xx_traj, uu_traj = task2Data.getOptimalTrajectory()
     task4Data = task4(
         task2Data.xx_des,
         task2Data.uu_des,
-        xx_traj, uu_traj, QQ, RR, MPC_NTT,
+        xx_traj, uu_traj, QQ, RR,
         lazyness[4]
     )
-    for i in range(task4Data.getTrackLength()): task4Data.plotTrack(i)
+    for i in range(task4Data.getTracksLength()): task4Data.plotTrack(i)
+
+if (tasks[5]): 
+    task2Data = task2(lazyExecution = True)[0]
+    task3Data = task3(lazyExecution = True)
+    task4Data = task4(lazyExecution = True)
+    xx_traj, uu_traj = task2Data.getOptimalTrajectory()
+    xx_lqr, _ = task3Data.tracks[0]
+    xx_mpc, _ = task4Data.tracks[0]
+    task5(
+        task2Data.xx_des,
+        xx_traj, 
+        xx_lqr, 
+        xx_mpc
+    )
 
 
