@@ -27,7 +27,7 @@ def task3(xx_des, uu_des, xx_traj, uu_traj, QQ, RR, lazyExecution = False):
     KK = solveLQP(AAlin, BBlin, QQ, RR, QQT, TT, xx_traj[:,0])[0]
 
     # Defining some noise levels (in %)(for the initial state) and then running the LQR on the given trajectory
-    xx0noiseLevels = [0.0, 0.25, 0.5]
+    xx0noiseLevels = [0.0, 0.2, 0.4]
     startComputingTime = datetime.now()
     xx0noises = [generateInitialStateNoise(xx_traj, np) for np in xx0noiseLevels]
     tracks = [runLQRController(xx_traj, uu_traj, KK, discretizedDynamicFRA, xx0noise) for xx0noise in xx0noises]
