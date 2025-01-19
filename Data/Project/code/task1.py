@@ -41,7 +41,7 @@ def task1(lazyExecution = False):
     # uu_des[int(tu.size/2):] = uu_equlibrium2.reshape(ni,1)
 
     # Defining cost matrices (for a trajectory tracking optimization probl0.001em) and applying the Newton Method
-    QQ = 12*eye(ns)
+    QQ = 12.0*eye(ns)
     RR = 0.001*eye(ni)
     newtonMethodMaxIterations = 42
     tolerance = 1e-6
