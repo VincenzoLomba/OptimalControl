@@ -46,7 +46,7 @@ def task2(lazyExecution = False):
     uu_des = array([searchFRAInputGivenAnEquilibria(xx_des[0,i]) for i in range(len(t))]).reshape(1, len(t))
 
     # Defining cost matrices (for a trajectory tracking optimization probl0.001em) and applying the Newton Method
-    QQ = diag([16,16,1,1])
+    QQ = diag([16.0,16.0,1.0,1.0])
     RR = 0.001*eye(ni)
     newtonMethodMaxIterations = 35
     tolerance = 1e-6
