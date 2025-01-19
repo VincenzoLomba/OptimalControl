@@ -14,8 +14,8 @@ taskName = "task1"
 def task1(lazyExecution = False):
 
     if lazyExecution:
-        trjTrkOCPData = loadDataFromFile(taskName)
-        if trjTrkOCPData is not None: return trjTrkOCPData
+        data = loadDataFromFile(taskName)
+        if data is not None: return data
 
     # Definition of the time instants in which the desired input-state curve will evolve.
     T = array([0, 4, 8, 12])

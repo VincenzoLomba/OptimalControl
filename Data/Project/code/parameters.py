@@ -24,6 +24,6 @@ armijoC = 0.5
 discretizationStep = 1e-3
 
 # Absolute folder where to save the results of the various tasks
-savesFolder = 'C:\\Users\\vince\\OneDrive\\Documenti\\Università\\Magistrale\\Second Year\\Optimal Control\\pythonworkspace\\Data\\Project\\code\\saves'
+savesFolder = 'saves'
 # Date format used in the name of the files
 dateFormat = "%Y-%m-%d_%H-%M-%S"

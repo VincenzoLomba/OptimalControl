@@ -166,7 +166,7 @@ def computeLocalLinearization(xx_traj, uu_traj):
     - AA: nsxnsxTT tensor of jacobians of the dynamics w.r.t. the state at each time instant
     - BB: nsxnixTT tensor of jacobians of the dynamics w.r.t. the input at each time instant
     """
-    xx_des, uu_des, ns, ni, TT = correctStateInputCurvesShapes(xx_traj, uu_traj)
+    xx_traj, uu_traj, ns, ni, TT = correctStateInputCurvesShapes(xx_traj, uu_traj)
     AA = zeros((ns, ns, TT))
     BB = zeros((ns, ni, TT))
     for tt in range(TT): 

@@ -1,8 +1,8 @@
 
-# Some useful functions (and the class TrjTrkOCPData) that are used in the project
+# Some useful functions (and the classes TrjTrkOCPData and TrjTrkCntrlData) that are used in the project
 
 import os, parameters as params
-from numpy import linspace, zeros, zeros_like, argmin
+from numpy import linspace, zeros, zeros_like
 import joblib
 from parameters import discretizationStep as dt
 from datetime import datetime
@@ -16,6 +16,11 @@ def getTimeDifferenceAsString(endingTime, startingTime):
     return str(hours) + " hours, " + str(minutes) + " minutes, " + str(seconds) + " seconds"
 
 def getTime(): return datetime.now().strftime(params.dateFormat)
+
+def initSavesFolder():
+    currentFileDirectory = os.path.dirname(os.path.abspath(__file__))
+    params.savesFolder = os.path.join(currentFileDirectory, "saves")
+    if not os.path.exists(params.savesFolder): os.makedirs(params.savesFolder)
 
 def saveDataOnFile(data, filename):
     
@@ -107,13 +112,21 @@ class TrjTrkOCPData:
     
     def plotStateInputOptimalTrajectory(self):
         xx_opt, uu_opt = self.getOptimalTrajectory()
-        return plotter.plotStateInputCurves(self.xx_des, self.uu_des, xx_opt, uu_opt, 'desired', 'optimal', dt)
+        return plotter.plotStateInputCurves(
+            self.xx_des, self.uu_des, xx_opt, uu_opt,
+            'desired', 'optimal', dt
+        )
     
     def plotStateInputOptimalTrajectoryEvolution(self, itemsList = None):
         itemsList = generateCleanedIndexCollection(itemsList, self.K+1)
         xxCollectionCast = self.xxCollection[:,:,itemsList]
         uuCollectionCast = self.uuCollection[:,:,itemsList]
-        return plotter.plotStateInputCurvesEvolution(self.xx_des, self.uu_des, xxCollectionCast, uuCollectionCast, 'desired', 'optimal', dt, itemsList), itemsList
+        return plotter.plotStateInputCurvesEvolution(
+            self.xx_des, self.uu_des, xxCollectionCast, uuCollectionCast,
+            'desired', 'optimal', dt,
+            "States Trajectories" + f' for iterations: k∈{str(itemsList)}',
+            "Input Trajectory" + f' for iterations: k∈{str(itemsList)}'
+        ), itemsList
     
     def plotArmijo(self, itemsList = None):
         if itemsList is not None: itemsList = [int(x)-1 for x in itemsList]
@@ -142,12 +155,14 @@ class TrjTrkOCPData:
 class RegulatorType(Enum): LQR = "LQR"; MPC = "MPC"
 class TrjTrkCntrlData:
 
-    def __init__(self, xx_traj, uu_traj, tracks, noises, regulatorType):
+    def __init__(self, xx_traj, uu_traj, tracks, noises, regulatorType, startComputingTime = None, endComputingTime = None):
         self.xx_traj = xx_traj
         self.uu_traj = uu_traj
         self.tracks = tracks
         self.noises = noises
         self.regulatorType = regulatorType
+        self.startComputingTime = startComputingTime
+        self.endComputingTime = endComputingTime
 
     def getTrack(self, index): return self.tracks[index][0:2]
     def getNoise(self, index): return self.noises[index]
@@ -160,8 +175,8 @@ class TrjTrkCntrlData:
         return plotter.plotStateInputCurves(
             self.xx_traj, self.uu_traj, x, u,
             'reference', 'tracked', dt,
-            f'States Trajectories Tracked with {str(self.regulatorType)} (initial state noise Δxx0={noise})',
-            f'Input Trajectory Tracked with {str(self.regulatorType)} (initial state noise Δxx0={noise})',
+            f'States Trajectories Tracked with {self.regulatorType.value} (initial state noise Δxx0={noise})',
+            f'Input Trajectory Tracked with {self.regulatorType.value} (initial state noise Δxx0={noise})',
         )
 
 

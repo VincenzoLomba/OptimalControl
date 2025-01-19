@@ -4,11 +4,9 @@
 
 from miscellaneous import correctStateInputCurvesShapes, saveDataOnFile, loadDataFromFile, TrjTrkCntrlData, RegulatorType
 from dynamics import computeLocalLinearization
-from solver import solveARE
 from regulators import runMPController, generateInitialStateNoise
 from dynamics import discretizedDynamicFRA
-
-from miscellaneous import getTime
+from datetime import datetime
 
 taskName = "task4"
 def task4(xx_des, uu_des, xx_traj, uu_traj, QQ, RR, lazyExecution = False):
@@ -17,15 +15,19 @@ def task4(xx_des, uu_des, xx_traj, uu_traj, QQ, RR, lazyExecution = False):
         data = loadDataFromFile(taskName)
         if data is not None : return data
 
+     # Computing the linearization of the dynamics around the given trajectory
     xx_des, uu_des, _, _, _ = correctStateInputCurvesShapes(xx_des, uu_des)
     AAlin, BBlin = computeLocalLinearization(xx_traj, uu_traj)
-    QQT = solveARE(AAlin[:,:,-1], BBlin[:,:,-1], QQ, RR, None)
 
-    MPC_TT = 5
+    # Defining the prediction time horizon for the MPC (in terms of quantity of time instants)
+    MPC_TT = 500
 
-    noiseLevels = [0.5]
-    noises = [generateInitialStateNoise(xx_traj, np) for np in noiseLevels]
-    tracks = [runMPController(xx_traj, uu_traj, AAlin, BBlin, QQ, RR, QQ, MPC_TT, discretizedDynamicFRA, noise) for noise in noises]
+    # Defining some noise levels (in %)(for the initial state) and then running the MPC on the given trajectory
+    xx0noiseLevels = [0.0, 0.2, 0.4]
+    startComputingTime = datetime.now()
+    xx0noises = [generateInitialStateNoise(xx_traj, np) for np in xx0noiseLevels]
+    tracks = [runMPController(xx_traj, uu_traj, AAlin, BBlin, QQ, RR, QQ, MPC_TT, discretizedDynamicFRA, xx0noise) for xx0noise in xx0noises]
+
     for i in range(len(tracks)):
         xx_track, uu_ttrack = tracks[i]
         xx_track = xx_track[:,:-MPC_TT]
@@ -33,7 +35,7 @@ def task4(xx_des, uu_des, xx_traj, uu_traj, QQ, RR, lazyExecution = False):
         tracks[i] = (xx_track, uu_ttrack)
     xx_traj = xx_traj[:,:-MPC_TT]
     uu_traj = uu_traj[:,:-MPC_TT]
-    data = TrjTrkCntrlData(xx_traj, uu_traj, tracks, noises, RegulatorType.MPC)
+    data = TrjTrkCntrlData(xx_traj, uu_traj, tracks, xx0noises, RegulatorType.MPC, startComputingTime, datetime.now())
     saveDataOnFile(data, taskName)
     return data
 

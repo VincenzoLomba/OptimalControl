@@ -9,15 +9,14 @@ import parameters as params
 colorMap = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
 
 def plotStateInputCurves(xxFirst, uuFirst, xxSecond, uuSecond, labelFirst, labelSecond, dt, supTitleFirst = None, supTitleSecond = None, showFigures = True):
-    return plotStateInputCurvesEvolution(xxFirst, uuFirst, xxSecond, uuSecond, labelFirst, labelSecond, dt, supTitleFirst, supTitleSecond, None, showFigures)
+    return plotStateInputCurvesEvolution(xxFirst, uuFirst, xxSecond, uuSecond, labelFirst, labelSecond, dt, supTitleFirst, supTitleSecond, showFigures)
 
-def plotStateInputCurvesEvolution(xxFirst, uuFirst, xxSecondCollection, uuSecondCollection, labelFirst, labelSecond, dt, supTitleFirst = None, supTitleSecond = None, indexesCollection = None, showFigures = True):
+def plotStateInputCurvesEvolution(xxFirst, uuFirst, xxSecondCollection, uuSecondCollection, labelFirst, labelSecond, dt, supTitleFirst = None, supTitleSecond = None, showFigures = True):
     """
     Generates ns subplots for desired and optimal state trajectories and a separate plot for the desired and optimal (supposed single) input trajectory
     """
     # Preparation of the data for the plotting
     KK = xxSecondCollection.shape[2] if xxSecondCollection.ndim > 2 else 1
-    withEvolution = indexesCollection is not None
     xxFirst, uuFirst = squeeze(xxFirst), squeeze(uuFirst)
     xxSecond = squeeze(xxSecondCollection) if KK > 1 else squeeze(xxSecondCollection)[:,:,None]
     uuSecond = squeeze(uuSecondCollection) if KK > 1 else squeeze(uuSecondCollection)[:,None]
@@ -30,11 +29,10 @@ def plotStateInputCurvesEvolution(xxFirst, uuFirst, xxSecondCollection, uuSecond
     alpha = linspace(0.33 if KK > 1 else 1, 1, KK)
 
     # Creating various subplots (one for each state)
-    xFigureTitle = "States Trajectories" + (f' for iterations: k∈{str(indexesCollection)}' if withEvolution else '')
+    xFigureTitle = supTitleFirst if supTitleFirst else "States Trajectories"
     xFigure, axes = subplots(int(ns/2), 2, figsize = (10, 8))
     xFigure.canvas.manager.set_window_title(xFigureTitle if not supTitleFirst else supTitleFirst)
-    if supTitleFirst: suptitle(supTitleFirst)
-    elif withEvolution: suptitle(xFigureTitle)
+    if supTitleFirst: suptitle(xFigureTitle)
     axes = axes.flatten()  # Axes flattening for a simpler indexing
     for i in range(ns):
         ax = axes[i]
@@ -50,10 +48,10 @@ def plotStateInputCurvesEvolution(xxFirst, uuFirst, xxSecondCollection, uuSecond
     tight_layout()
     if (showFigures): show()
 
-    uFigureTitle = "Input Trajectory" + (f' for iterations k∈{str(indexesCollection)}' if withEvolution else '')
+    uFigureTitle = supTitleSecond if supTitleSecond else "Input Trajectory"
     uFigure = figure(figsize=(8, 6))
-    uFigure.canvas.manager.set_window_title(uFigureTitle if not supTitleSecond else supTitleSecond)
-    title(uFigureTitle if not supTitleSecond else supTitleSecond)
+    uFigure.canvas.manager.set_window_title(uFigureTitle)
+    title(uFigureTitle)
     line, = plot(tu, uuFirst, '--', label = f'{labelFirst} input')
     color = line.get_color()
     for k in range(KK):

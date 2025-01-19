@@ -6,6 +6,7 @@ from parameters import discretizationStep as dt
 from scipy.optimize import fsolve, minimize
 from scipy.interpolate import CubicSpline
 from enum import Enum
+import warnings
 
 class CurveType(Enum): sigmoid = "sigmoid"; cubic = "cubic"; exponential = "exponential"
 
@@ -120,9 +121,11 @@ def exponentialSpline(t1, t2, v1, v2, dt):
         kValues = curvature(dfdt, d2fd2t)
         return var(kValues) / mean(kValues)
     
+    warnings.filterwarnings("ignore")
     kk = minimize(curvatureVariance, x0=1.0, bounds=[(0.05, 4.0)], method='L-BFGS-B').x[0]
     A, B, C, D = solveExponentialSpline(kk)
     f, _, _ = exponentialSplineFunctions(kk, A, B, C, D)
+    warnings.filterwarnings("default")
 
     return f(tVals), tVals
 

@@ -129,7 +129,7 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFunct
 
 def solveCostateEquation(xx, uu, xx_des, uu_des, discretizedDynamicFuntion, stageCostFunction, termCostFunction, TT):
     """
-    Implementation of the backwards-in-time solution of the costate equation of an Optimal Control Problem.
+    Implementation of the backwards-in-time solution of the costate equation of an (unconstrained) Optimal Control Problem.
     Notice that in this method are computed (and returned in the following order):
     - the costate trajectory, alias the solution of the costate equation (lmbda)
     - the jacobians of the dynamic w.r.t. x and w.r.t. u at xx,uu at each time step (respectively AA and BB)
