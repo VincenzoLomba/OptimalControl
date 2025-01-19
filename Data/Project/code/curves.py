@@ -1,5 +1,5 @@
 
-# Curves Generator for states and inputs of a generic dynamic systems
+# Curves Generator for states and inputs (points connector)
 
 from numpy import linspace, exp, zeros, squeeze, abs, var, mean, inf, repeat, ones, ndarray
 from parameters import discretizationStep as dt

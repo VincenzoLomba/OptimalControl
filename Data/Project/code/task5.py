@@ -1,5 +1,5 @@
 
-# Flexible Robotic Arm Task5: produce a simple animation of the robot executing Task 3
+# Flexible Robotic Arm Task5: producing an animation of the robot executing Task 3
 
 from animation import animateFRA
 

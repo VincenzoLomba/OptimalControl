@@ -18,7 +18,7 @@ tasks = [1,1,1,1,1]
 
 # Lazyness selection (from one to five, for each task, set zero to avoid the laziness, any other
 # value to force the single task to load the results data from the last saved file (if it exists)
-lazyness = [True, True, True, True, None]
+lazyness = [False,False,False,False,None]
 
 # Correcting the tasks and lazyness lists (adding an empty element at zero index)
 tasks = [None] + tasks

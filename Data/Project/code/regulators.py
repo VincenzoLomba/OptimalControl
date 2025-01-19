@@ -1,5 +1,5 @@
 
-# Collection of functions that implement the Tegulators used in the Project (and correlated functions)
+# Collection of the functions that implement the Regulators used in the Project (and correlated functions)
 
 from miscellaneous import correctStateInputCurvesShapes
 from numpy import zeros, std, random, max, abs, array
