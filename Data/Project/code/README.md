@@ -1,6 +1,6 @@
 # Optimal Control of a Flexible Robotic Arm
 
-The current folder contains all the code related to the development of optimal control for a Flexible Robotic Arm, created following the guidelines in the file _Assignment OptimalControl FlexibleRoboticArm_. For a more detailed explanation of the various methods contained in the files, refer to their content and the comments and descriptions included within them.
+The current folder contains all the code related to the development of optimal control for a Flexible Robotic Arm, created following the guidelines in the file [_Assignment OptimalControl FlexibleRoboticArm_][1]. For a more detailed explanation of the various methods contained in the files, refer to their content and the comments and descriptions included within them.
 
 ### Main File Usage
 
@@ -28,3 +28,5 @@ Here is a descriptive list of the other files that make up the project:
 - **parameters**: this file contains all the parameters of the Flexible Robotic Arm (FRA) system, as well as other parameters used in the code
 - **plots**: project plotter, used for all plots generation
 - **animation**: project animator, to implement the Task5
+
+[1] https://github.com/VincenzoLomba/OptimalControl/blob/master/Data/Project/Assignment%20OptimalControl%20FlexibleRoboticArm.pdf
