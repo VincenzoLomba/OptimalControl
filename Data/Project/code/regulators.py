@@ -3,7 +3,7 @@
 
 from miscellaneous import correctStateInputCurvesShapes
 from numpy import zeros, std, random, max, abs, array
-from cvxpy import Variable, Minimize, Problem, quad_form
+from cvxpy import Variable, Minimize, Problem, quad_form, OSQP
 from solver import solveLQP
 
 def runLQRController(xx_traj, uu_traj, KK, discretizedDynamicFunction, xx0Noise = None, includeMeasureNoises = False):
@@ -135,7 +135,7 @@ def solveConstraintLQPCVX(xxt, xx_des, uu_des, AA, BB, QQ, RR, QQT, TT):
 
     # Solving the MPC problem
     problem = Problem(Minimize(cost), constr)
-    problem.solve()
+    problem.solve(solver = OSQP, eps_abs=1e-9, eps_rel=1e-9)
     if problem.status in ["infeasible", "infeasible_inaccurate"]: raise RuntimeError("Unfeasible MPC problem!")
     inputActionFirstValue = uu[:,0].value
     return uu.value, xx.value, inputActionFirstValue
@@ -144,7 +144,7 @@ def generateInitialStateNoise(xx, noiseStdPercentage, gainK = 2, randomNumberGen
     """
     Generation of a noise to be added to the initial state of the system.
     That noise in generated (for each single state) by taking samples from a N(0,1) normal distribution
-    scaled (in its standard deviation by the percentage of the standard deviation of the state itself.
+    scaled in its standard deviation by the percentage of the standard deviation of the state itself.
     """
     ns = xx.shape[0]
     if not noiseStdPercentage or noiseStdPercentage <= 0: return zeros(ns)

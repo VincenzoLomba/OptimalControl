@@ -23,14 +23,16 @@ def animateFRA(xx_star, xx_ref, lab1 = "path1", lab2 = "path2", showAnimation = 
     # Plot elements
     pendulum_line1, = ax.plot([], [], 'o-', lw=3, color="blue", label=f'{lab1}')         
     pendulum_line2, = ax.plot([], [], 'o-', lw=3, color="blue")                                                          
-    reference_line1, = ax.plot([], [], 'o--', lw=2, color="green", label=f'{lab2}')
+    reference_line1, = ax.plot([], [], 'o-', lw=2, color="green", label=f'{lab2}')
     reference_line2, = ax.plot([], [], 'o-', lw=2, color="green") 
     time_text = ax.text(0.045, 0.875, '', transform=ax.transAxes)
 
+    titl = f'Pendulum Trajectory: {lab1} VS {lab2}'
     ax.legend()
-    ax.set_title(f'Pendulum Trajectory: {lab1} VS {lab2}')
+    ax.set_title(titl)
     ax.set_xlabel("X position")
     ax.set_ylabel("Y position")
+    fig.canvas.manager.set_window_title(titl)
 
     # Initial setup function for the animation
     def init():

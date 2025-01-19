@@ -25,5 +25,6 @@ discretizationStep = 1e-3
 
 # Absolute folder where to save the results of the various tasks
 savesFolder = 'saves'
+
 # Date format used in the name of the files
 dateFormat = "%Y-%m-%d_%H-%M-%S"

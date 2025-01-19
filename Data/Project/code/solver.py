@@ -8,6 +8,7 @@ from dynamics import runDynamicFunction
 from costs import totalCostFunction, stageCostTrkTrj, termCostTrkTrj
 from miscellaneous import TrjTrkOCPData, correctStateInputCurvesShapes
 import parameters as params
+import logger
 
 def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFunction, tolerance, QQ, RR, QQT=None, fixedStepsize=None):
     """
@@ -71,30 +72,31 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFunct
     k = 0
     while k < maxIterations:
 
-        print("\n[>] N.M. now approaching iteration ", format(k+1))
+        logger.newLine()
+        logger.log(f'[>] N.M. now approaching iteration {k+1}')
 
-        print("Solving the costate equation (and computing all involved quantities)...")
+        logger.log("Solving the costate equation (and computing all involved quantities)...")
         _, AA, BB, _, _, _, qq, rr, qqT, QQtilde, SStilde, RRtilde, data.grdJJCollection[:,:,k], ll = solveCostateEquation(
             data.xxCollection[:,:,k], data.uuCollection[:,:,k], xx_des, uu_des,
             discretizedDynamicFunction, stageCostFunction, terminalCostFunction, TT
         )
 
-        print("Actual cost: ", ll)
+        logger.log(f'Actual cost: {ll}')
         data.costCollection.append(ll)
 
-        print("Solving the affine LQP that gives the descent direction (regularized version of the N.M. is considered)")
+        logger.log("Solving the affine LQP that gives the descent direction (regularized version of the N.M. is considered)")
         KK, sigma, _, _, deltau = solveAffineLQP(AA, BB, QQtilde, RRtilde, SStilde, QQT, TT, zeros_like(xx0), qq, rr, qqT)
         descentDirectionNorm = linalg.norm(data.grdJJCollection[:,:,k])
-        print("Descent direction norm (||-gradJ(u)||): {:.12f}".format(descentDirectionNorm))
-        print("N.M. direction norm (||deltau||): {:.12f}".format(linalg.norm(deltau)))
+        logger.log(f'Descent direction norm (||-gradJ(u)||): {descentDirectionNorm:.12f}')
+        logger.log(f'N.M. direction norm (||deltau||): {linalg.norm(deltau):.12f}')
 
         if descentDirectionNorm < tolerance:
-            print("The N.M. successfully converged in", k, "iterations (required time: {})!\n".format(data.getElapsedTime()))
+            logger.log(f'The N.M. successfully converged in {k} iterations (required time: {data.getElapsedTime()})!)')
             break
         
         direction = deltau
         if fixedStepsize is None:
-            print("Computing the stepsize exploiting the Armijo's rule (relying on the Newton Direction)...")
+            logger.log("Computing the stepsize exploiting the Armijo's rule (relying on the Newton Direction)...")
             stepsize, armijoStepsizes, armijoCosts, armijoLinePendence = armijoStepSize(
                 data.uuCollection[:,:,k], data.xxCollection[:,:,k], xx_des, uu_des,
                 ll, direction, data.grdJJCollection[:,:,k], KK, sigma, TT,
@@ -104,16 +106,16 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFunct
             data.armijoCostsCollection.append(armijoCosts)
             data.armijoLinePendenceCollection.append(armijoLinePendence)
             if stepsize > 0:
-                print("After exploiting the Armijo's rule, using as stepsize: {:.10}".format(stepsize))
+                logger.log(f'After exploiting the Armijo\'s rule, using as stepsize: {stepsize:.10}')
             else:
-                print("ERROR: Armijo's rule failed, alias, in the moving direction the cost is always increasing, even for small stepsizes!")
-                print("The method failed in its minimum search, now ending (elapsed time: {})!\n".format(data.getElapsedTime()))
+                logger.log("ERROR: Armijo's rule failed, alias, in the moving direction the cost is always increasing, even for small stepsizes!")
+                logger.log(f'The method failed in its minimum search, now ending (elapsed time: {data.getElapsedTime()})!')
                 break
         else:
-            print("Using as stepsize the given fixed value: {:.10}".format(fixedStepsize))
+            logger.log(f'Using as stepsize the given fixed value: {fixedStepsize:.10}')
             stepsize = fixedStepsize
 
-        print("Updating the state-input trajectory (in closed-loop version)")
+        logger.log("Updating the state-input trajectory (in closed-loop version)")
         data.uuCollection[:,:,k+1], data.xxCollection[:,:,k+1] = updateInputStateTrajectory(
             ns, ni, xx0, data.uuCollection[:,:,k], data.xxCollection[:,:,k], stepsize, direction, KK, sigma, TT, discretizedDynamicFunction
         )
@@ -121,10 +123,11 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFunct
         k += 1 # Incrementing the iteration index
 
         if k >= maxIterations-1:
-            print("WARNING: the N.M. was not able to converge (not converging in ", maxIterations, " iterations) (elapsed time: {})!\n".format(data.getElapsedTime()))
+            logger.log(f'WARNING: the N.M. was not able to converge (not converging in {maxIterations} iterations) (elapsed time: {data.getElapsedTime()})!')
             break
 
     data.K = k
+    logger.newLine()
     return data
 
 def solveCostateEquation(xx, uu, xx_des, uu_des, discretizedDynamicFuntion, stageCostFunction, termCostFunction, TT):
@@ -280,10 +283,10 @@ def armijoStepSize(uu, xx, xx_des, uu_des, ll, direction, grdJdu, KK, sigma, TT,
     armijoCosts = []
 
     armijoLinePendence = dot(squeeze(direction), squeeze(grdJdu))
-    print(" | Armijo line pendence: {:.16f} (alias dot-product between gradJ(u) and the moving direction)".format(armijoLinePendence))
+    logger.log(f' | Armijo line pendence: {armijoLinePendence:.16f} (alias dot-product between gradJ(u) and the moving direction)')
     stepsizeInitialGuess = float(1 if (stepsizeInitialGuess is None) else stepsizeInitialGuess)
     stepsize = stepsizeInitialGuess
-    print(" | Using as initial guess for the Armijo stepsize: {:.10}".format(stepsize))
+    logger.log(f' | Using as initial guess for the Armijo stepsize: {stepsize:.10}')
 
     for ii in range(armijoMaximumIterations):
 
@@ -296,7 +299,7 @@ def armijoStepSize(uu, xx, xx_des, uu_des, ll, direction, grdJdu, KK, sigma, TT,
             pass
         finally: seterr(**originalNPErrSettings)
 
-        print(" | New cost achieved by moving with stepsize {:.10}:".format(stepsize), " not evaluable (retrived a LinAlgError)" if tempJJ < 0 else tempJJ)
+        logger.log(f' | New cost achieved by moving with stepsize {stepsize:.10}: {("not evaluable (retrived a LinAlgError)" if tempJJ < 0 else tempJJ)}')
         if tempJJ >= 0:
             armijoStepsizes.append(stepsize)
             armijoCosts.append(tempJJ)
@@ -304,18 +307,16 @@ def armijoStepSize(uu, xx, xx_des, uu_des, ll, direction, grdJdu, KK, sigma, TT,
         if tempJJ < 0 or tempJJ >= ll + armijoC*stepsize*armijoLinePendence:
             stepsize = armijoBeta*stepsize
         else:
-            print(" | Detected Armijo stepsize = {:.10} (in {} iterations)".format(stepsize, ii+1))
+            logger.log(f' | Detected Armijo stepsize = {stepsize:.10} (in {ii+1} iterations)')
             break
         if ii >= armijoMaximumIterations-1:
-            print(" | WARNING: no stepsize was found applying the Armijo's Rule (not converging in {} iterations)(last stepsize attempted: {:.10})!".format(
-                armijoMaximumIterations, stepsize/armijoBeta
-            ))
+            logger.log(f' | WARNING: no stepsize was found applying the Armijo\'s Rule (not converging in {armijoMaximumIterations} iterations)(last stepsize attempted: {(stepsize/armijoBeta):.10})!')
             minCostIndex = argmin(armijoCosts)
             if armijoCosts[minCostIndex] < ll:
                 stepsize = armijoStepsizes[minCostIndex]
-                print(" | One (or more) of the tested stepsizes led to a cost lower than the initial one, so the best one of them is selected:", stepsize)
+                logger.log(f' | One (or more) of the tested stepsizes led to a cost lower than the initial one, so the best one of them is selected: {stepsize}')
             else:
-                print(" | WARNING: All the attempted stepsizes leads to a cost higher than the initial one!")
+                logger.log(" | WARNING: All the attempted stepsizes leads to a cost higher than the initial one!")
                 stepsize = -1
 
     armijoStepsizes.append(0)
