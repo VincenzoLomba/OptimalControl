@@ -1,13 +1,13 @@
 # Optimal Control of a Flexible Robotic Arm
 
-The current folder contains all the code related to the development of optimal control for a Flexible Robotic Arm, created following the guidelines in the file [_Assignment OptimalControl FlexibleRoboticArm_][1]. For a more detailed explanation of the various methods contained in the files, refer to their content and the comments and descriptions included within them.
+The current folder contains all the code related to the development of optimal control for a Flexible Robotic Arm, created following the guidelines in the file [_Assignment OptimalControl FlexibleRoboticArm_][1]. For a more detailed explanation of the various methods contained in the files, refer to their content and the comments and descriptions included within them. Even more, for a better insight into the project, refer to the related Final Report.
 
 ### Main File Usage
 
 The file _main.py_ is the most important file for running the code and observing its results.<br>
 The **tasks list** at the beginning of the file can and must be used to select which tasks to execute and display in their results through appropriate plots.
 The **lazyness list** at the beginning of the file can be used to indicate, for each executed task, whether it should attempt to retrieve the most recent save (if available) and load its data, or perform a new and clean execution of the code.<br>
-Afterwards, the file _main.py_ proceeds to execute and manage the requested tasks and display their results.
+Afterwards, the file _main.py_ proceeds to execute and manage the requested tasks and display their results, logging also information about the code execution as it evolves. Furthermore, each task, once its execution is completed, saves the obtained results to file.
 
 ### Other files brief description
 
