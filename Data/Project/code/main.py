@@ -8,6 +8,7 @@ from task3 import task3
 from task4 import task4
 from task5 import task5
 
+# Initializing the project saves folder
 initSavesFolder()
 
 # Tasks selection (from one to five, for each task, set zero to avoid the
