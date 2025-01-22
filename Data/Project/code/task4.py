@@ -4,42 +4,48 @@
 
 from miscellaneous import correctStateInputCurvesShapes, saveDataOnFile, loadDataFromFile, TrjTrkCntrlData, RegulatorType
 from dynamics import computeLocalLinearization
-from regulators import runMPController, generateInitialStateNoise
+from regulators import runMPCController, generateInitialStateNoise
 from dynamics import discretizedDynamicFRA
 from datetime import datetime
-from numpy import diag, eye
+from numpy import diag, eye, array, hstack
+from parameters import discretizationStep as dt
 import logger
 
 taskName = "task4"
-def task4(xx_des, uu_des, xx_traj, uu_traj, lazyExecution = False):
+def task4(xx_traj, uu_traj, lazyExecution = False):
     
     if lazyExecution:
         data = loadDataFromFile(taskName)
         if data is not None:
             logger.log("Task4 data loaded from file")
             return data
+        
+    logger.log("Defining the prediction time horizon for the MPC (in terms of quantity of time instants)")
+    MPC_TT = 400 # int(4/dt)
 
     logger.log("Computing the linearization of the dynamics around the given trajectory...")
-    xx_des, uu_des, _, ni, _ = correctStateInputCurvesShapes(xx_des, uu_des)
+    xx_traj, uu_traj, ns, ni, _ = correctStateInputCurvesShapes(xx_traj, uu_traj)
+    xx_traj = hstack((xx_traj, array(xx_traj[:,-1]).reshape((ns, 1)).repeat(MPC_TT, axis=1)))
+    uu_traj = hstack((uu_traj, array(uu_traj[:,-1]).reshape((ni, 1)).repeat(MPC_TT, axis=1)))
     AAlin, BBlin = computeLocalLinearization(xx_traj, uu_traj)
 
     logger.log("Defining cost matrices")
-    QQ = diag([16.0,16.0,1.0,1.0])
-    RR = 0.001*eye(ni)
-
-    logger.log("Defining the prediction time horizon for the MPC (in terms of quantity of time instants)")
-    MPC_TT = 50
+    QQ = diag([16.0,16.0,6.0,6.0])
+    RR = 0.0001*eye(ni)
 
     # Defining some noise levels (in %)(for the initial state) and then running the MPC on the given trajectory
-    xx0noiseLevels = [0.0, 0.2, 0.4]
+    xx0DisturbancesLevels = [0.0, 0.1, 0.2]
+    generateMeasureNoises = False
+    considerAdditionalConstraints = False
     startComputingTime = datetime.now()
-    xx0noises = []
+    xx0Disturbances = []
     tracks = []
-    for np in xx0noiseLevels:
-        logger.log(f'Running the MPC controller tracking the given trajectory (noise~N(0,p) with p={np}% of state S.D.)...')
-        xx0noise = generateInitialStateNoise(xx_traj, np)
-        xx0noises.append(xx0noise)
-        tracks.append(runMPController(xx_traj, uu_traj, AAlin, BBlin, QQ, RR, QQ, MPC_TT, discretizedDynamicFRA, xx0noise))
+    for dp in xx0DisturbancesLevels:
+        logger.log(f'Running the MPC controller tracking the given trajectory (xx0Disturbance~N(0,p) with p={dp*100}% of state S.D.)...')
+        xx0Disturbance = generateInitialStateNoise(xx_traj, dp)
+        xx0Disturbances.append(xx0Disturbance)
+        tracks.append(runMPCController(xx_traj, uu_traj, AAlin, BBlin, QQ, RR, MPC_TT, discretizedDynamicFRA,
+                                       xx0Disturbance, generateMeasureNoises, True, considerAdditionalConstraints))
     for i in range(len(tracks)):
         xx_track, uu_ttrack = tracks[i]
         xx_track = xx_track[:,:-MPC_TT]
@@ -49,8 +55,6 @@ def task4(xx_des, uu_des, xx_traj, uu_traj, lazyExecution = False):
     uu_traj = uu_traj[:,:-MPC_TT]
 
     logger.log("Saving results on file and returning them")
-    data = TrjTrkCntrlData(xx_traj, uu_traj, tracks, xx0noises, RegulatorType.MPC, startComputingTime, datetime.now())
+    data = TrjTrkCntrlData(xx_traj, uu_traj, tracks, xx0Disturbances, generateMeasureNoises, RegulatorType.MPC, startComputingTime, datetime.now())
     saveDataOnFile(data, taskName)
     return data
-
-if __name__ == "__main__": task4()

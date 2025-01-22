@@ -21,7 +21,7 @@ armijoBeta = 0.7
 armijoC = 0.5
 
 # The discretization step (used for example in the FRA discretized dynamic), in seconds
-discretizationStep = 1e-3
+discretizationStep = 1e-2
 
 # Absolute folder where to save the results of the various tasks
 savesFolder = 'saves'

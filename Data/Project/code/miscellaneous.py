@@ -8,6 +8,7 @@ from parameters import discretizationStep as dt
 from datetime import datetime
 import plots as plotter
 from enum import Enum
+from numpy import pi
 
 def getTimeDifferenceAsString(endingTime, startingTime):
     timeDifference = endingTime - startingTime
@@ -91,6 +92,8 @@ class TrjTrkOCPData:
         self.armijoStepsizesCollection = []
         self.armijoCostsCollection = []
         self.armijoLinePendenceCollection = []
+        self.armijoStepsizesCollectionPlot = []
+        self.armijoCostsCollectionPlot = []
         self.K = None
 
     def setEndingTime(self):
@@ -133,11 +136,16 @@ class TrjTrkOCPData:
         itemsList = generateCleanedIndexCollection(itemsList, self.K, forceExtremes = False)
         armijoStepsizesCollectionCast = [self.armijoStepsizesCollection[i] for i in itemsList]
         armijoCostsCollectionCast = [self.armijoCostsCollection[i] for i in itemsList]
+        armijoStepsizesCollectionCastPlot = [self.armijoStepsizesCollectionPlot[i] for i in itemsList]
+        armijoCostsCollectionCastPlot = [self.armijoCostsCollectionPlot[i] for i in itemsList]
         armijoLinePendenceCollectionCast = [self.armijoLinePendenceCollection[i] for i in itemsList]
         figs = []
         for i in range(len(itemsList)): figs.append(
-            plotter.plotArmijo(armijoStepsizesCollectionCast[i],
+            plotter.plotArmijo(
+            armijoStepsizesCollectionCast[i],
             armijoCostsCollectionCast[i],
+            armijoStepsizesCollectionCastPlot[i],
+            armijoCostsCollectionCastPlot[i],
             armijoLinePendenceCollectionCast[i],
             f'Armijo\'s Rule Step Size Selection Behavior for iteration k={itemsList[i]+1}',
         ))
@@ -155,28 +163,30 @@ class TrjTrkOCPData:
 class RegulatorType(Enum): LQR = "LQR"; MPC = "MPC"
 class TrjTrkCntrlData:
 
-    def __init__(self, xx_traj, uu_traj, tracks, noises, regulatorType, startComputingTime = None, endComputingTime = None):
+    def __init__(self, xx_traj, uu_traj, tracks, disturbances, measureNoisesIncluded, regulatorType, startComputingTime = None, endComputingTime = None):
         self.xx_traj = xx_traj
         self.uu_traj = uu_traj
         self.tracks = tracks
-        self.noises = noises
+        self.initialStateDisturbances = disturbances
+        self.measureNoisesIncluded = measureNoisesIncluded
         self.regulatorType = regulatorType
         self.startComputingTime = startComputingTime
         self.endComputingTime = endComputingTime
 
     def getTrack(self, index): return self.tracks[index][0:2]
-    def getNoise(self, index): return self.noises[index]
+    def getNoise(self, index): return self.initialStateDisturbances[index]
     def getTracksLength(self): return len(self.tracks)
 
     def plotTrack(self, index):
 
         x, u = self.getTrack(index)
-        noise = ', '.join([f"{n:.3f}" for n in self.getNoise(index)])
+        disturbance = ', '.join([f"{n:.2f}" for n in self.getNoise(index)/pi*180])
+        withNoises = "\n(with measure noises)" if self.measureNoisesIncluded else ""
         return plotter.plotStateInputCurves(
             self.xx_traj, self.uu_traj, x, u,
             'reference', 'tracked', dt,
-            f'States Trajectories Tracked with {self.regulatorType.value} (initial state noise Δxx0={noise})',
-            f'Input Trajectory Tracked with {self.regulatorType.value} (initial state noise Δxx0={noise})',
+            f'States Trajectories Tracked with {self.regulatorType.value}\n(initial state disturbance Δxx0={disturbance}){withNoises}',
+            f'Input Trajectory Tracked with {self.regulatorType.value}\n(initial state disturbance Δxx0={disturbance}){withNoises}'
         )
 
 

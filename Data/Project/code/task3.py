@@ -12,7 +12,7 @@ from numpy import diag, eye
 import logger
 
 taskName = "task3"
-def task3(xx_des, uu_des, xx_traj, uu_traj, lazyExecution = False):
+def task3(xx_traj, uu_traj, lazyExecution = False):
     
     if lazyExecution:
         data = loadDataFromFile(taskName)
@@ -21,11 +21,11 @@ def task3(xx_des, uu_des, xx_traj, uu_traj, lazyExecution = False):
             return data
 
     logger.log("Computing the linearization of the dynamics around the given trajectory...")
-    xx_des, uu_des, _, ni, TT = correctStateInputCurvesShapes(xx_des, uu_des)
+    xx_traj, uu_traj, _, ni, TT = correctStateInputCurvesShapes(xx_traj, uu_traj)
     AAlin, BBlin = computeLocalLinearization(xx_traj, uu_traj)
 
     logger.log("Defining cost matrices")
-    QQ = diag([16.0,16.0,1.0,1.0])
+    QQ = diag([16.0,16.0,6.0,6.0])
     RR = 0.001*eye(ni)
 
     logger.log("Computing the terminal cost matrix as the solution of the ARE (alias Pinfinity)")
@@ -35,19 +35,18 @@ def task3(xx_des, uu_des, xx_traj, uu_traj, lazyExecution = False):
     KK = solveLQP(AAlin, BBlin, QQ, RR, QQT, TT, xx_traj[:,0])[0]
 
     # Defining some noise levels (in %)(for the initial state) and then running the LQR on the given trajectory
-    xx0noiseLevels = [0.0, 0.2, 0.4]
+    xx0disturbanceLevels = [0.0, 0.1, 0.2]
+    generateMeasureNoises = False
     startComputingTime = datetime.now()
-    xx0noises = []
+    xx0disturbances = []
     tracks = []
-    for np in xx0noiseLevels:
-        logger.log(f'Running the LQR controller tracking the given trajectory (noise~N(0,p) with p={np}% of state S.D.)...')
-        xx0noise = generateInitialStateNoise(xx_traj, np)
-        xx0noises.append(xx0noise)
-        tracks.append(runLQRController(xx_traj, uu_traj, KK, discretizedDynamicFRA, xx0noise))
+    for dp in xx0disturbanceLevels:
+        logger.log(f'Running the LQR controller tracking the given trajectory (xx0Disturbance~N(0,p) with p={dp*100}% of state S.D.)...')
+        xx0disturbance = generateInitialStateNoise(xx_traj, dp)
+        xx0disturbances.append(xx0disturbance)
+        tracks.append(runLQRController(xx_traj, uu_traj, KK, discretizedDynamicFRA, xx0disturbance, generateMeasureNoises))
 
     logger.log("Saving results on file and returning them")
-    data = TrjTrkCntrlData(xx_traj, uu_traj, tracks, xx0noises, RegulatorType.LQR, startComputingTime, datetime.now())
+    data = TrjTrkCntrlData(xx_traj, uu_traj, tracks, xx0disturbances, generateMeasureNoises, RegulatorType.LQR, startComputingTime, datetime.now())
     saveDataOnFile(data, taskName)
     return data
-
-if __name__ == "__main__": task3()

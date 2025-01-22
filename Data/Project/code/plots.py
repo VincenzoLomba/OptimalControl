@@ -64,21 +64,36 @@ def plotStateInputCurvesEvolution(xxFirst, uuFirst, xxSecondCollection, uuSecond
 
     return xFigure, uFigure
 
-def plotArmijo(armijoStepsizes, armijoCosts, armijoLinePendence, pTitle, showFigure = True):
+def plotArmijo(armijoStepsizes, armijoCosts, armijoStepsizesPlot, armijoCostsPlot, armijoLinePendence, pTitle, showFigure = True):
     """ Generates a plot for the Armijo's Rule step size selection behavior"""
-    ll = armijoCosts[-1]
-    fig = figure(figsize=(8, 6))
-    fig.canvas.manager.set_window_title(pTitle)
-    title(pTitle)
-    plot(armijoStepsizes, armijoCosts, color='k', label='$J(\\mathbf{u}^k+stepsize*d^k)$')
-    plot(armijoStepsizes, ll + armijoLinePendence*armijoStepsizes, color='r', label='$J(\\mathbf{u}^k)+stepsize*\\nabla J(\\mathbf{u}^k)^{\\top} d^k$')
-    plot(armijoStepsizes, ll + params.armijoC*armijoLinePendence*armijoStepsizes, color='g', linestyle='dashed', label='$J(\\mathbf{u}^k)+stepsize*c*\\nabla J(\\mathbf{u}^k)^{\\top} d^k$')
-    scatter(armijoStepsizes, armijoCosts, marker='*')
-    grid()
-    xlabel('stepsize')
-    legend()
-    tight_layout()
-    if (showFigure): show()
+    if not armijoStepsizesPlot.any():
+        ll = armijoCosts[-1]
+        fig = figure(figsize=(8, 6))
+        fig.canvas.manager.set_window_title(pTitle)
+        title(pTitle)
+        plot(armijoStepsizes, armijoCosts, color='k', label='$J(\\mathbf{u}^k+stepsize*d^k)$')
+        plot(armijoStepsizes, ll + armijoLinePendence*armijoStepsizes, color='r', label='$J(\\mathbf{u}^k)+stepsize*\\nabla J(\\mathbf{u}^k)^{\\top} d^k$')
+        plot(armijoStepsizes, ll + params.armijoC*armijoLinePendence*armijoStepsizes, color='g', linestyle='dashed', label='$J(\\mathbf{u}^k)+stepsize*c*\\nabla J(\\mathbf{u}^k)^{\\top} d^k$')
+        scatter(armijoStepsizes, armijoCosts, marker='*')
+        grid()
+        xlabel('stepsize')
+        legend()
+        tight_layout()
+        if (showFigure): show()
+    else:
+        ll = armijoCostsPlot[0]
+        fig = figure(figsize=(8, 6))
+        fig.canvas.manager.set_window_title(pTitle)
+        title(pTitle)
+        plot(armijoStepsizesPlot, armijoCostsPlot, color='k', label='$J(\\mathbf{u}^k+stepsize*d^k)$')
+        plot(armijoStepsizesPlot, ll + armijoLinePendence*armijoStepsizesPlot, color='r', label='$J(\\mathbf{u}^k)+stepsize*\\nabla J(\\mathbf{u}^k)^{\\top} d^k$')
+        plot(armijoStepsizesPlot, ll + params.armijoC*armijoLinePendence*armijoStepsizesPlot, color='g', linestyle='dashed', label='$J(\\mathbf{u}^k)+stepsize*c*\\nabla J(\\mathbf{u}^k)^{\\top} d^k$')
+        scatter(armijoStepsizes, armijoCosts, marker='*', color='orange')
+        grid()
+        xlabel('stepsize')
+        legend()
+        tight_layout()
+        if (showFigure): show()
     return fig
 
 def plotDescentDirectionNormEvolution(grdJJCollection, showFigure = True):

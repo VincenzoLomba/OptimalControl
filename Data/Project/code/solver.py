@@ -1,7 +1,7 @@
 
 # Solver for an Optimal Control Trajectory Tracking Problem (and all the involved functions)
 
-from numpy import repeat, newaxis, zeros, zeros_like, squeeze, linalg, eye, dot, seterr, argmin, allclose, array
+from numpy import repeat, newaxis, zeros, zeros_like, squeeze, linalg, eye, dot, seterr, argmin, allclose, array, linspace
 from builtins import all
 from control import dare
 from dynamics import runDynamicFunction
@@ -10,7 +10,7 @@ from miscellaneous import TrjTrkOCPData, correctStateInputCurvesShapes
 import parameters as params
 import logger
 
-def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFunction, tolerance, QQ, RR, QQT=None, fixedStepsize=None):
+def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFunction, tolerance, QQ, RR, QQT=None, fixedStepsize=None, generateNicePlots=False):
     """
     Newton's Like Method in closed loop version for an Optimal Control Trajectory Tracking Problem.
     
@@ -97,14 +97,17 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFunct
         direction = deltau
         if fixedStepsize is None:
             logger.log("Computing the stepsize exploiting the Armijo's rule (relying on the Newton Direction)...")
-            stepsize, armijoStepsizes, armijoCosts, armijoLinePendence = armijoStepSize(
+            stepsize, armijoStepsizes, armijoCosts, armijoStepsizesPlot, armijoCostsPlot, armijoLinePendence = armijoStepSize(
                 data.uuCollection[:,:,k], data.xxCollection[:,:,k], xx_des, uu_des,
                 ll, direction, data.grdJJCollection[:,:,k], KK, sigma, TT,
-                discretizedDynamicFunction, stageCostFunction, terminalCostFunction
+                discretizedDynamicFunction, stageCostFunction, terminalCostFunction,
+                None, generateNicePlots
             )
             data.armijoStepsizesCollection.append(armijoStepsizes)
             data.armijoCostsCollection.append(armijoCosts)
             data.armijoLinePendenceCollection.append(armijoLinePendence)
+            data.armijoStepsizesCollectionPlot.append(armijoStepsizesPlot)
+            data.armijoCostsCollectionPlot.append(armijoCostsPlot)
             if stepsize > 0:
                 logger.log(f'After exploiting the Armijo\'s rule, using as stepsize: {stepsize:.10}')
             else:
@@ -270,7 +273,7 @@ def solveLQP(AA, BB, QQ, RR, QQT, TT, xx0):
         uuout = uu
     return KK, PP, xxout, uuout
 
-def armijoStepSize(uu, xx, xx_des, uu_des, ll, direction, grdJdu, KK, sigma, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction, stepsizeInitialGuess = None):
+def armijoStepSize(uu, xx, xx_des, uu_des, ll, direction, grdJdu, KK, sigma, TT, discretizedDynamicFuntion, stageCostFunction, terminalCostFunction, stepsizeInitialGuess = None, generateNicePlots = False):
     """ Armijo's Rule for Step Size Selection """
 
     armijoMaximumIterations = 14
@@ -318,10 +321,21 @@ def armijoStepSize(uu, xx, xx_des, uu_des, ll, direction, grdJdu, KK, sigma, TT,
             else:
                 logger.log(" | WARNING: All the attempted stepsizes leads to a cost higher than the initial one!")
                 stepsize = -1
-
     armijoStepsizes.append(0)
     armijoCosts.append(ll)
-    return stepsize, array(armijoStepsizes), array(armijoCosts), array(armijoLinePendence)
+    
+    armijoStepsizesPlot = []
+    armijoCostsPlot = []
+    if generateNicePlots:
+        logger.log(" | Generating the Armijo plot...")
+        armijoStepsizesPlot = linspace(0, stepsizeInitialGuess, int(2e1))
+        for ii in range(len(armijoStepsizesPlot)):
+            step = armijoStepsizesPlot[ii]
+            tempuu, tempxx = updateInputStateTrajectory(ns, ni, xx0, uu, xx, step, direction, KK, sigma, TT, discretizedDynamicFuntion)
+            tempJJ = totalCostFunction(tempxx, tempuu, xx_des, uu_des, TT, stageCostFunction, terminalCostFunction)
+            armijoCostsPlot.append(tempJJ)
+    
+    return stepsize, array(armijoStepsizes), array(armijoCosts), array(armijoStepsizesPlot), array(armijoCostsPlot), array(armijoLinePendence)
 
 def solveARE(A, B, Q, R, S):
     # https://en.wikipedia.org/wiki/Linear%E2%80%93quadratic_regulator#Infinite-horizon,_discrete-time
