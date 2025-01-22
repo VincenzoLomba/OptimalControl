@@ -14,7 +14,7 @@ initSavesFolder()
 
 # Tasks selection (from one to five, for each task, set zero to avoid the
 # execution, any other value to instead execute the particualr task)
-tasks = [0,0,0,1,0]
+tasks = [1,1,1,1,1]
 
 # Lazyness selection (from one to five, for each task, set zero to avoid the laziness, any other
 # value to force the single task to load the results data from the last saved file (if it exists)

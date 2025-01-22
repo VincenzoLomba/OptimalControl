@@ -36,6 +36,8 @@ def task4(xx_traj, uu_traj, lazyExecution = False):
     # Defining some noise levels (in %)(for the initial state) and then running the MPC on the given trajectory
     xx0DisturbancesLevels = [0.0, 0.1, 0.2]
     generateMeasureNoises = False
+    # xx0DisturbancesLevels = [0.0]
+    # generateMeasureNoises = True
     considerAdditionalConstraints = False
     startComputingTime = datetime.now()
     xx0Disturbances = []

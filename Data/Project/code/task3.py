@@ -37,6 +37,8 @@ def task3(xx_traj, uu_traj, lazyExecution = False):
     # Defining some noise levels (in %)(for the initial state) and then running the LQR on the given trajectory
     xx0disturbanceLevels = [0.0, 0.1, 0.2]
     generateMeasureNoises = False
+    # xx0disturbanceLevels = [0.0]
+    # generateMeasureNoises = True
     startComputingTime = datetime.now()
     xx0disturbances = []
     tracks = []
