@@ -54,7 +54,7 @@ def runMPCController(xx_traj, uu_traj, AA, BB, QQ, RR, MPC_TT, discretizedDynami
     - uu_traj: The input reference trajectory
     - AA: Matrix A (alias obtained deriving w.r.t. the state) of the linearized dynamics around the reference trajectory (T.V.)
     - BB: Matrix B (alias obtained deriving w.r.t. the input) of the linearized dynamics around the reference trajectory (T.V.)
-    - QQ, RR, QQT: Cost matrices (supposed to be time invariant)
+    - QQ, RR: Cost matrices (supposed to be time invariant)
     - MPC_TT: Prediction time horizon for the MPC (in terms of quantity of time instants)
     - discretizedDynamicFunction: A function that represents the discretized dynamic of the system
     - xx0Disturbance: A disturbance to be eventually added to the initial state
@@ -122,7 +122,7 @@ def cvxpyProblemSetup(ns, ni, QQ, RR, QQT, MPC_TT, considerAdditionalConstraints
     This function sets up the CVXPY problem for the MPC controller (if needed)
     Arguments:
     - ns, ni: Number of states and inputs
-    - QQ, RR: States and input cost matrices (supposed to be time invariant)
+    - QQ, RR, QQT: States and input cost matrices (supposed to be time invariant)
     - MPC_TT: Prediction time horizon for the MPC (in terms of quantity of time instants)
     - considerAdditionalConstraints: A boolean flag that indicates if already-set-up additional constraints should be considered
     Returns:
@@ -157,7 +157,7 @@ def cvxpyProblemSetup(ns, ni, QQ, RR, QQT, MPC_TT, considerAdditionalConstraints
     # Definition the initial state constraint
     constraints += [dx[:,0] == xx0_real - xx_traj[:,0]]
     if considerAdditionalConstraints:
-        # Additional constraints (related to the input)
+        # Additional constraints (related to the input, values in Nm)
         constraints += [uu_real <= 45.0, uu_real >= -10.0]
     # Finally, defintion of the CVXPY problem
     cvxProblem = Problem(Minimize(cost), constraints)

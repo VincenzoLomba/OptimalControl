@@ -25,6 +25,7 @@ def task4(xx_traj, uu_traj, lazyExecution = False):
 
     logger.log("Computing the linearization of the dynamics around the given trajectory...")
     xx_traj, uu_traj, ns, ni, _ = correctStateInputCurvesShapes(xx_traj, uu_traj)
+    # Adding a costant terminal part to the input-state trajectory of the same time-size of the prediction horizon
     xx_traj = hstack((xx_traj, array(xx_traj[:,-1]).reshape((ns, 1)).repeat(MPC_TT, axis=1)))
     uu_traj = hstack((uu_traj, array(uu_traj[:,-1]).reshape((ni, 1)).repeat(MPC_TT, axis=1)))
     AAlin, BBlin = computeLocalLinearization(xx_traj, uu_traj)
@@ -33,12 +34,15 @@ def task4(xx_traj, uu_traj, lazyExecution = False):
     QQ = diag([16.0,16.0,6.0,6.0])
     RR = 0.0001*eye(ni)
 
-    # Defining some noise levels (in %)(for the initial state) and then running the MPC on the given trajectory
+    # Defining some initial disturbance levels (in %) and eventually add the generation of measure noises
     xx0DisturbancesLevels = [0.0, 0.1, 0.2]
     generateMeasureNoises = False
     # xx0DisturbancesLevels = [0.0]
     # generateMeasureNoises = True
-    considerAdditionalConstraints = False
+    considerAdditionalConstraints = False # True
+
+    # Run the MPC on the given trajectory
+    useCVXSolver = True
     startComputingTime = datetime.now()
     xx0Disturbances = []
     tracks = []
@@ -47,7 +51,7 @@ def task4(xx_traj, uu_traj, lazyExecution = False):
         xx0Disturbance = generateInitialStateNoise(xx_traj, dp)
         xx0Disturbances.append(xx0Disturbance)
         tracks.append(runMPCController(xx_traj, uu_traj, AAlin, BBlin, QQ, RR, MPC_TT, discretizedDynamicFRA,
-                                       xx0Disturbance, generateMeasureNoises, True, considerAdditionalConstraints))
+                                       xx0Disturbance, generateMeasureNoises, useCVXSolver, considerAdditionalConstraints))
     for i in range(len(tracks)):
         xx_track, uu_ttrack = tracks[i]
         xx_track = xx_track[:,:-MPC_TT]

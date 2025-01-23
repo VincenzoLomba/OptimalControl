@@ -10,6 +10,8 @@ from task5 import task5
 import logger
 
 # Initializing the project saves folder
+# Be aware: if you change some parameters of the project, you of course should NOT rely on the old saved data!
+# In this case, you should delete the folder "Data/Project/saves" before running the code again.
 initSavesFolder()
 
 # Tasks selection (from one to five, for each task, set zero to avoid the
@@ -17,8 +19,8 @@ initSavesFolder()
 tasks = [1,1,1,1,1]
 
 # Lazyness selection (from one to five, for each task, set zero to avoid the laziness, any other
-# value to force the single task to load the results data from the last saved file (if it exists)
-lazyness = [False,False,False,False,None]
+# value to force the single task to load the results data from the last saved file (if it exists))
+lazyness = [True,True,True,True,None]
 
 # Correcting the tasks and lazyness lists (adding an empty element at zero index)
 tasks = [None] + tasks
@@ -49,7 +51,7 @@ if (tasks[2]):
 if (tasks[3]):
     logger.setActive("task3")
     logger.log("Recovering reference trajectory from Task2")
-    task2Data, _, _ = task2(lazyExecution = True)
+    task2Data, _, _ = task2(lazyExecution = lazyness[2])
     xx_traj, uu_traj = task2Data.getOptimalTrajectory()
     task3Data: TrjTrkCntrlData
     task3Data = task3(xx_traj, uu_traj, lazyness[3])
@@ -59,7 +61,7 @@ if (tasks[3]):
 if (tasks[4]):
     logger.setActive("task4")
     logger.log("Recovering reference trajectory from Task2")
-    task2Data, _, _ = task2(lazyExecution = True)
+    task2Data, _, _ = task2(lazyExecution = lazyness[2])
     xx_traj, uu_traj = task2Data.getOptimalTrajectory()
     task4Data: TrjTrkCntrlData
     task4Data = task4(xx_traj, uu_traj, lazyness[4])
@@ -70,12 +72,12 @@ if (tasks[5]):
     logger.setActive("task5")
 
     logger.log("Recovering reference trajectory from Task2")
-    task2Data, _, _ = task2(lazyExecution = True)
+    task2Data, _, _ = task2(lazyExecution = lazyness[2])
     xx_traj, uu_traj = task2Data.getOptimalTrajectory()
 
     logger.log("Recovering tracked by LQR trajectory from Task3")
-    task3Data = task3(xx_traj, uu_traj, lazyExecution = True)
-    xx_lqr, _ = task3Data.tracks[1]
+    task3Data = task3(xx_traj, uu_traj, lazyExecution = lazyness[3])
+    xx_lqr, _ = task3Data.tracks[1] # Recovering the LQR tracked trajectory (the second one, alias with minor initial disturbances)
 
     logger.log("Animating FRA (close the animation to make the code end its execution)")
     task5(xx_traj, xx_lqr, "Reference Path", "Tracked By LQR Path")

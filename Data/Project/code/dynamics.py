@@ -50,15 +50,6 @@ def discretizedDynamicFRA(xx, uu, onlyZeroOrderDynamic = False):
     invM = linalg.pinv(M)
     # Derivative of the inverse of the inertia matrix w.r.t. the second state x1 (2x2)
     dinvMdx1 = -invM@dMdx1@invM
-    # Second order derivative of the inertia matrix w.r.t. the second state x1 two times (2x2)
-    d2Mdx1x1 = array([
-        [-2*m2*l1*r2*cos(xx[1]),    -m2*l1*r2*cos(xx[1]) ], 
-        [-m2*l1*r2*cos(xx[1]),      0                    ]
-    ])
-    # Tensor second order derivative of the intertia matrix w.r.t. the state vector (2x2x4)
-    # d2Mdxdx = [zeros((2,2)), d2Mdx1x1, zeros((2,2)), zeros((2,2))]
-    # Second order derivative of the inverse of the inertia matrix w.r.t. the second state x1 two times (2x2)
-    # d2invMdx1x1 = -invM@d2Mdx1x1@invM+2*invM@dMdx1@invM@dMdx1@invM
 
     # Tensor derivative of the Coriolis and centrifugal forces matrix w.r.t. the state vector (2x1x4)
     dCdx0 = array([0, 0])

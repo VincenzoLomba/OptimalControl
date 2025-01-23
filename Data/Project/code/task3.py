@@ -34,11 +34,13 @@ def task3(xx_traj, uu_traj, lazyExecution = False):
     logger.log("Computing the T.V. LQR (Linear Quadratic Regulator), optimal feedback controller")
     KK = solveLQP(AAlin, BBlin, QQ, RR, QQT, TT, xx_traj[:,0])[0]
 
-    # Defining some noise levels (in %)(for the initial state) and then running the LQR on the given trajectory
+    # Defining some initial disturbance levels (in %) and eventually add the generation of measure noises
     xx0disturbanceLevels = [0.0, 0.1, 0.2]
     generateMeasureNoises = False
     # xx0disturbanceLevels = [0.0]
     # generateMeasureNoises = True
+
+    # Run the LQR on the given trajectory
     startComputingTime = datetime.now()
     xx0disturbances = []
     tracks = []

@@ -54,12 +54,12 @@ def task2(lazyExecution = False):
     logger.log("Defining cost matrices and applying the Newton Method...")
     QQ = diag([16.0,16.0,6.0,6.0])
     RR = 0.001*eye(ni)
-    newtonMethodMaxIterations = 35
+    newtonMethodMaxIterations = 42
     tolerance = 1e-6
     trjTrkOCPData = runNewtonMethodTrkTrj(
         xx_des, uu_des, newtonMethodMaxIterations,
         discretizedDynamicFRA, tolerance,
-        QQ, RR, None, None, True
+        QQ, RR, None, None, generateNicePlots = True
     )
 
     logger.log("Saving results on file and returning them")

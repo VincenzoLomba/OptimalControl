@@ -47,6 +47,7 @@ def loadDataFromFile(filename):
     return joblib.load(os.path.join(params.savesFolder, fullFileName))
 
 def correctStateInputCurvesShapes(xx, uu):
+    
     if (uu.ndim == 1):
         ni = 1
         uu = uu.reshape(ni, uu.shape[0])
@@ -185,8 +186,8 @@ class TrjTrkCntrlData:
         return plotter.plotStateInputCurves(
             self.xx_traj, self.uu_traj, x, u,
             'reference', 'tracked', dt,
-            f'States Trajectories Tracked with {self.regulatorType.value}\n(initial state disturbance Δxx0={disturbance}){withNoises}',
-            f'Input Trajectory Tracked with {self.regulatorType.value}\n(initial state disturbance Δxx0={disturbance}){withNoises}'
+            f'States Trajectories Tracked with {self.regulatorType.value}\n(initial state disturbance in degrees Δxx0={disturbance}){withNoises}',
+            f'Input Trajectory Tracked with {self.regulatorType.value}\n(initial state disturbance in degrees Δxx0={disturbance}){withNoises}'
         )
 
 
