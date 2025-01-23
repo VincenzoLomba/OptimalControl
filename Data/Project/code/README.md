@@ -5,9 +5,14 @@ The current folder contains all the code related to the development of optimal c
 ### Main File Usage
 
 The file _main.py_ is the most important file for running the code and observing its results.<br>
+If you are running the project for the first time, the only thing to do is to run the _main.py_ file as is, and then observe the results!<br>
+
 The **tasks list** at the beginning of the file can and must be used to select which tasks to execute and display in their results through appropriate plots.
-The **lazyness list** at the beginning of the file can be used to indicate, for each executed task, whether it should attempt to retrieve the most recent save (if available) and load its data, or perform a new and clean execution of the code.<br>
-Afterwards, the file _main.py_ proceeds to execute and manage the requested tasks and display their results, logging also information about the code execution as it evolves. Furthermore, each task, once its execution is completed, saves the obtained results to file.
+The **lazyness list** at the beginning of the file can be used to indicate, for each executed task, whether it should attempt to retrieve the most recent save (if available) and load its data, or perform a new and clean execution of the code. Indeed, you should not rely on the lazyness mechanics if you have changed some project parameters (whether they are global parameters, contained in the file _parameters.py_, or local parameters, contained in the various tasks) with the aim of observing the new different results obtained from executing one or more set-to-active tasks.<br>
+Afterwards, the file _main.py_ proceeds to execute and manage the requested tasks and display their results, logging also information about the code execution as it evolves. Furthermore, each task, once its execution is completed, saves the obtained results to file.<br>
+**An important first note**: be aware that some tasks reference to (and make use of) previous tasks. For example, both Task3 and Task4 retrieve the reference input-state trajectory from Task2 (which is executed in a lazy way if its laziness is set to True).<br>
+**A second important note**: to potentially modify the behavior of any one of the tasks, you have to refer to the variables contained in the respective Python code file (so task1.py for Task1, task2.py for Task2, and so on...). For example, in Task3 and Task4, to add/remove any disturbances to the initial state or to activate/deactivate the generation of measurement noise along the whole trajectory, you have to modify the respective variables _xx0disturbanceLevels_ and _generateMeasureNoises_ within the files task3.py and task4.py respectively.<br>
+**A third important note**: the execution of Task1 and Task2 may experience slowdowns due to the generation (for each iteration of the Newton Method) of Armijo plots that are good presentable to the eye (therefore populated with a sufficiently high number of points). To avoid this behavior, thereby achieving faster executions at the expense of generating simpler Armijo plots, the variable _generateNicePlots_ within the files _task1.py_ and _task2.py_ should be set to False. On the other hand, if you want nice Armijo plots to be generated, set that variable to True.
 
 ### Other files brief description
 
