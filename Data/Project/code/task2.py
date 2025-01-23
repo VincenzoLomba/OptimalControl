@@ -59,7 +59,7 @@ def task2(lazyExecution = False):
     trjTrkOCPData = runNewtonMethodTrkTrj(
         xx_des, uu_des, newtonMethodMaxIterations,
         discretizedDynamicFRA, tolerance,
-        QQ, RR, None, None, generateNicePlots = True
+        QQ, RR, None, None, generateNicePlots = False
     )
 
     logger.log("Saving results on file and returning them")
