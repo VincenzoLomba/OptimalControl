@@ -23,9 +23,9 @@ Here is a descriptive list of the other files that make up the project:
 - **task3**: after linearizing the dynamics of the FRA around a given trajectory, exploiting the LQR algorithm to define the optimal feedback controller to track the said trajectory
 - **task4**: after linearizing the dynamics of the FRA around a given trajectory, exploiting an MPC algorithm to track the said trajectory
 - **task5**: producing an animation of the robot executing Task 3
-- **solver**: solver for an Optimal Control Trajectory Tracking Problem (and ALL the involved functions, as the N.M., or the Armijo StepSize selection rule, or the solver of an LQP, and so on)
+- **solver**: solver for an Optimal Control Trajectory Generation Problem (and ALL the involved functions, as the N.M., or the Armijo StepSize selection rule, or the solver of an LQP, and so on)
 - **dynamics**: this file contains the Flexible Robotic Arm discretized dynamics and some related methods, such as a method to evolve forward-in-time (in an open loop fashon) a dynamic system or also a method to compute a local linearization of a NL dynamic around a given trajectory
-- **costs**: definition of the cost functions for a Trajectory Tracking Optimal Control Problem
+- **costs**: definition of the cost functions for a Trajectory Generation Optimal Control Problem
 - **curves**: curves generator for states and inputs (in a fashion that a given series of points are properly connected)
 - **equilibria**: Flexible Robotic Arm Equilibrium Points Searcher
 - **regulators**: collection of the functions that implement the Regulators used in the Project (and correlated functions), alias LQR and MPC

@@ -1,5 +1,5 @@
 
-# Solver for an Optimal Control Trajectory Tracking Problem (and all the involved functions)
+# Solver for an Optimal Control Trajectory Generation Problem (and all the involved functions)
 
 from numpy import repeat, newaxis, zeros, zeros_like, squeeze, linalg, eye, dot, seterr, argmin, allclose, array, linspace
 from builtins import all
@@ -12,7 +12,7 @@ import logger
 
 def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFunction, tolerance, QQ, RR, QQT=None, fixedStepsize=None, generateNicePlots=False):
     """
-    Newton's Like Method in closed loop version for an Optimal Control Trajectory Tracking Problem.
+    Newton's Like Method in closed loop version for an Optimal Control Trajectory Generation Problem.
     
     Arguments:
     - xx_des: column vector state desired curve (dimension: ns*TT) (ns is the number of states of the system)
@@ -33,6 +33,7 @@ def runNewtonMethodTrkTrj(xx_des, uu_des, maxIterations, discretizedDynamicFunct
     - RR: nixni stage input cost matrix (if time invariant) or nixnixTT stage input cost tensor (if time variant)
     - QQT: nsxns terminal state cost matrix (if None, the solution of the ARE at t=TT-1 is used for the terminal cost)
     - fixedStepsize: fixed stepsize to use for the optimization (if None, the Armijo's rule is exploited to compute the stepsize)
+    - generateNicePlots: flag to enable the generation of nice plots for the Armijo's rule (if True, the method generates the plots)
 
     Returns:
     - xx: column vector state (feasible) trajectory obtained through the optimization (coupled with uu; returning a state-input trajectory)

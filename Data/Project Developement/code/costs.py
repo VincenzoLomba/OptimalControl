@@ -1,11 +1,11 @@
 
-# Definition of the cost functions for a Trajectory Tracking Optimal Control Problem
+# Definition of the cost functions for a Trajectory Generation Optimal Control Problem
 
 from numpy import squeeze, zeros
 
 def stageCostTrkTrj(ns, ni, xx, uu, xx_des, uu_des, QQt, RRt):
     """
-    Stage cost function for a trajectory tracking optimization problem.
+    Stage cost function for a trajectory generation optimization problem.
     This cost function is typically defined as the sum of two quadratic function, one for the state, one for the input.
     Definition as follows: l(x,u) = 1/2(x-x_des)'Q(x-x_des) + 1/2(u-u_des)'R(u-u_des)
     Arguments:
@@ -43,7 +43,7 @@ def stageCostTrkTrj(ns, ni, xx, uu, xx_des, uu_des, QQt, RRt):
 
 def termCostTrkTrj(ns, xT, xT_des, QQT):
     """
-    Terminal cost function for a trajectory tracking optimization problem.
+    Terminal cost function for a trajectory generation optimization problem.
     This cost function is typically defined as a quadratic function of the state (in its terminal value).
     Definition as follows: l_T(x) = 1/2(x-x_des)'Q_T(x-x_des)
     Arguments:
