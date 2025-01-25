@@ -35,4 +35,4 @@ Here is a descriptive list of the other files that make up the project:
 - **plots**: project plotter, used for all plots generation
 - **animation**: project animator, to implement the Task5
 
-[1]: https://github.com/VincenzoLomba/OptimalControl/blob/master/Data/Project/Assignment%20OptimalControl%20FlexibleRoboticArm.pdf
+[1]: https://github.com/VincenzoLomba/OptimalControl/blob/master/Data/Project%20Developement/Assignment%20OptimalControl%20FlexibleRoboticArm.pdf
