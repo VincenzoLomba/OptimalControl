@@ -69,6 +69,7 @@ RR = 1e-2*np.eye(ni)
 
 # different possibilities
 QQf = np.array([[1e2, 0], [0, 100]])
+# QQf = ctrl.dare(AA,BB,QQ,RR)[0]
 
 
 # Infinite-horizon gain

@@ -67,7 +67,7 @@ print(AA.shape,QQ.shape)
 print(BB.shape,RR.shape)
 
 QQf = np.eye(ns)
-#QQf = ctrl.dare(AA,BB,QQ,RR)[0]
+# QQf = ctrl.dare(AA,BB,QQ,RR)[0]
 
 
 #######################################
