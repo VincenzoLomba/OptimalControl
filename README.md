@@ -9,7 +9,10 @@
 This repository contains all the code developed during lessions of [OptimalControl](https://www.unibo.it/en/study/phd-professional-masters-specialisation-schools-and-other-programmes/course-unit-catalogue/course-unit/2024/454489),
 which is a teaching of [Automation Engeneering's degree](https://corsi.unibo.it/2cycle/AutomationEngineering) ([Alma Mater Studiorum, University of Bologna](https://www.unibo.it/en/homepage)). All **relevant material** in terms of code is contained in the [Data folder](https://github.com/VincenzoLomba/OptimalControl/tree/master/Data). <br/>
 <br/>
-All the code is written in [Python](https://www.python.org/about/). All projects and exercises are developed using [VIsual Studio Code](https://code.visualstudio.com/) as editor.<br/>
+All the code is written in [Python](https://www.python.org/about/). All projects and exercises are developed using [VIsual Studio Code](https://code.visualstudio.com/) as editor.
+
+### OptimalControl of a Flexible Robotic Arm
+Note also that this repository contains the [code related to the development](Data/Project Developement/code) of an optimal control for a Flexible Robotic Arm
   
 ### Some useful guides about Git usage
   
