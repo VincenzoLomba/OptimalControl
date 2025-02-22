@@ -12,7 +12,7 @@ which is a teaching of [Automation Engeneering's degree](https://corsi.unibo.it/
 All the code is written in [Python](https://www.python.org/about/). All projects and exercises are developed using [VIsual Studio Code](https://code.visualstudio.com/) as editor.
 
 ### OptimalControl of a Flexible Robotic Arm
-Note also that this repository contains the [code related to the development](Data/Project Developement/code) of an optimal control for a Flexible Robotic Arm
+Note also that this repository contains the [code related to the development](Data/Project Developement/code) of an optimal control for a Flexible Robotic Arm.
   
 ### Some useful guides about Git usage
   
