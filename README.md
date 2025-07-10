@@ -1,30 +1,24 @@
 <body>
+  
+*If you're using the content of this Repostory, please consider to <a class="github-button" href="https://github.com/VincenzoLomba/OptimalControl/subscription" data-icon="octicon-eye" data-show-count="true" aria-label="Watch VincenzoLomba/OptimalControl on GitHub">Watch</a> or [Star](https://github.com/VincenzoLomba/OptimalControl/stargazers) it in order to help tracking how many people are drawing on it.*
+  
+ [![VincenzoLomba - OptimalControl](https://img.shields.io/static/v1?label=VincenzoLomba&message=OptimalControl&color=green&logo=github)](https://github.com/VincenzoLomba/OptimalControl "Go to GitHub repo")
 
-*If you're using the content of this repository, please consider [Watching](https://github.com/VincenzoLomba/DistributedAutonomousSystems/subscription) or [Starring](https://github.com/VincenzoLomba/DistributedAutonomousSystems/stargazers) it to help track how many people are benefiting from it.*
+# Optimal Control Teaching
 
-[![VincenzoLomba - DistributedAutonomousSystems](https://img.shields.io/static/v1?label=VincenzoLomba&message=DistributedAutonomousSystems&color=green&logo=github)](https://github.com/VincenzoLomba/DistributedAutonomousSystems "Go to GitHub repo")
-
-# Distributed Autonomous Systems Teaching
-
-This repository contains all the code developed during the lessons of [Distributed Autonomous Systems](https://www.unibo.it/en/study/phd-professional-masters-specialisation-schools-and-other-programmes/course-unit-catalogue/course-unit/2024/454490),  
-a course within the [Automation Engineering degree program](https://corsi.unibo.it/2cycle/AutomationEngineering) at [Alma Mater Studiorum – University of Bologna](https://www.unibo.it/en/homepage).  
+This repository contains all the code developed during lessions of [OptimalControl](https://www.unibo.it/en/study/phd-professional-masters-specialisation-schools-and-other-programmes/course-unit-catalogue/course-unit/2024/454489),
+which is a teaching of [Automation Engeneering's degree](https://corsi.unibo.it/2cycle/AutomationEngineering) ([Alma Mater Studiorum, University of Bologna](https://www.unibo.it/en/homepage)). All **relevant material** in terms of code is contained in the [Code folder](https://github.com/VincenzoLomba/OptimalControl/tree/master/Code). <br/>
 <br/>
-All the code is written in [Python](https://www.python.org/about/). Projects and exercises are developed using [Visual Studio Code](https://code.visualstudio.com/) as the preferred editor.
+All the code is written in [Python](https://www.python.org/about/). All projects and exercises are developed using [VIsual Studio Code](https://code.visualstudio.com/) as editor.
 
-### Implementations of the G.T.M. *and* a Distributed Aggregative Optimization Problem for a Multi-Agent System (in ROS2)
-
-This repository also includes the [code](https://github.com/VincenzoLomba/DistributedAutonomousSystems/tree/master/python/Code/Final%20Project) developed for the DAS Final Project, which consists of:
-
-- An implementation of the **Gradient Tracking Method (G.T.M.)**, tested and applied to a cooperative multi-robot target localization problem.
-- An implementation of a **multi-robot (i.e., multi-agent) aggregative optimization algorithm**, with full visualization and animation capabilities.
-- A ROS2-based version of the above optimization algorithm, using [ROS2 Humble](https://docs.ros.org/en/humble/index.html) to simulate a truly distributed system.
-
-### Some Useful Guides on Git Usage
-
+### OptimalControl of a Flexible Robotic Arm
+Note also that this repository contains the [code](https://github.com/VincenzoLomba/OptimalControl/tree/master/Data/Project%20Developement/code) related to the development of an optimal control for a Flexible Robotic Arm (developed following the guidelines of the file [Assignment OptimalControl FlexibleRoboticArm.pdf](https://github.com/VincenzoLomba/OptimalControl/blob/master/Data/Project%20Developement/Assignment%20OptimalControl%20FlexibleRoboticArm.pdf)).
+  
+### Some useful guides about Git usage
+  
 - [Git, the simple guide](https://rogerdudler.github.io/git-guide/)
-- [Adding an existing project to Git](https://gist.github.com/alexpchin/102854243cd066f8b88e)
+- [Adding an existring project to Git](https://gist.github.com/alexpchin/102854243cd066f8b88e)
 - [How to use .gitignore](https://git-scm.com/docs/gitignore)
 - [How to force a .gitignore update](https://stackoverflow.com/questions/38450276/force-git-to-update-gitignore)
 - [Git Badge Generator](https://michaelcurrin.github.io/badge-generator/#/repo)
-
 </body>
