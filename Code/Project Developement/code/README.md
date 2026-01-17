@@ -5,7 +5,7 @@ The current folder contains all the code related to the development of optimal c
 ### Main File Usage
 
 The file _main.py_ is the most important file for running the code and observing its results.<br>
-If you are running the project for the first time, the only thing you have to do is to run the _main.py_ file as is, and then observe the results!<br>
+If you are running the project for the first time, the only thing you have to do is to run the _main.py_  file as is, and then observe the results!<br>
 
 The **tasks list** at the beginning of the file can and must be used to select which tasks to execute and display in their results through appropriate plots.
 The **lazyness list** at the beginning of the file can be used to indicate, for each executed task, whether it should attempt to retrieve the most recent save (if available) and load its data, or perform a new and clean execution of the code. Indeed, you should not rely on the lazyness mechanics if you have changed some project parameters (whether they are global parameters, contained in the file _parameters.py_, or local parameters, contained in the various tasks) with the aim of observing the new different results obtained from executing one or more set-to-active tasks.<br>
